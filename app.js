@@ -40,9 +40,9 @@ var InitDemo = function () {
   //out is not acually doing the painting just choosing the paint
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); // do the actual painting of the background, by clearing the color buffer
   gl.enable(gl.DEPTH_TEST); // activate the z-buffer algorithm
-  //gl.enable(gl.CULL_FACE); //enable backface culling
-  //gl.frontFace(gl.CCW); // front facing primitves are drawn counter clock wise
-  //gl.cullFace(gl.BACK); // cut away the back faces.
+  gl.enable(gl.CULL_FACE); //enable backface culling
+  gl.frontFace(gl.CCW); // front facing primitves are drawn counter clock wise
+  gl.cullFace(gl.BACK); // cut away the back faces.
   //#endregion
 
   //#region Create and Compile Shader Program
@@ -95,30 +95,30 @@ var InitDemo = function () {
   //create a buffer
   //create vertices write counterclockwise
   var skyboxVerts = [
-    // X, Y, Z           R, G, B
+    // X, Y, Z   U,V
     // Top
-    -1.0, 1.0, -1.0, 0.6, 0.6, 1, -1.0, 1.0, 1.0, 0.6, 0.6, 1, 1.0, 1.0, 1.0,
-    0.6, 0.6, 1, 1.0, 1.0, -1.0, 0.6, 0.6, 1,
+    -1.0, 1.0, -1.0, 0, 0, -1.0, 1.0, 1.0, 0, 1, 1.0, 1.0, 1.0, 1, 1, 1.0, 1.0,
+    -1.0, 1, 0,
 
     // Left
-    -1.0, 1.0, 1.0, 0.6, 0.6, 1, -1.0, -1.0, 1.0, 0.6, 0.6, 1, -1.0, -1.0, -1.0,
-    0.6, 0.6, 1, -1.0, 1.0, -1.0, 0.6, 0.6, 1,
+    -1.0, 1.0, 1.0, 0, 0, -1.0, -1.0, 1.0, 0, 1, -1.0, -1.0, -1.0, 1, 1, -1.0,
+    1.0, -1.0, 1, 0,
 
     // Right
-    1.0, 1.0, 1.0, 0.6, 0.6, 1, 1.0, -1.0, 1.0, 0.6, 0.6, 1, 1.0, -1.0, -1.0,
-    0.6, 0.6, 1, 1.0, 1.0, -1.0, 0.6, 0.6, 1,
+    1.0, 1.0, 1.0, 0, 0, 1.0, -1.0, 1.0, 0, 1, 1.0, -1.0, -1.0, 1, 1, 1.0, 1.0,
+    -1.0, 1, 0,
 
     // Front
-    1.0, 1.0, 1.0, 0.6, 0.6, 1, 1.0, -1.0, 1.0, 0.6, 0.6, 1, -1.0, -1.0, 1.0,
-    0.6, 0.6, 1, -1.0, 1.0, 1.0, 0.6, 0.6, 1,
+    1.0, 1.0, 1.0, 0, 0, 1.0, -1.0, 1.0, 0, 1, -1.0, -1.0, 1.0, 1, 1, -1.0, 1.0,
+    1.0, 1, 0,
 
     // Back
-    1.0, 1.0, -1.0, 0.6, 0.6, 1, 1.0, -1.0, -1.0, 0.6, 0.6, 1, -1.0, -1.0, -1.0,
-    0.6, 0.6, 1, -1.0, 1.0, -1.0, 0.6, 0.6, 1,
+    1.0, 1.0, -1.0, 0, 0, 1.0, -1.0, -1.0, 0, 1, -1.0, -1.0, -1.0, 1, 1, -1.0,
+    1.0, -1.0, 1, 0,
 
     // Bottom
-    -1.0, -1.0, -1.0, 0.6, 0.6, 1, -1.0, -1.0, 1.0, 0.6, 0.6, 1, 1.0, -1.0, 1.0,
-    0.6, 0.6, 1, 1.0, -1.0, -1.0, 0.6, 0.6, 1,
+    -1.0, -1.0, -1.0, 0, 0, -1.0, -1.0, 1.0, 0, 1, 1.0, -1.0, 1.0, 1, 1, 1.0,
+    -1.0, -1.0, 1, 0,
   ];
 
   var boxIndices = [
@@ -155,8 +155,8 @@ var InitDemo = function () {
   );
 
   //index buffer object
-  var boxIndexBufferObject = gl.createBuffer();
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, boxIndexBufferObject);
+  var skyboxIndexBufferObject = gl.createBuffer();
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, skyboxIndexBufferObject);
   gl.bufferData(
     gl.ELEMENT_ARRAY_BUFFER,
     new Uint16Array(boxIndices),
@@ -166,29 +166,53 @@ var InitDemo = function () {
 
   //#region Attribute Location
   // position attribute allocation
+
   var positionAttribLocation = gl.getAttribLocation(program, "vertPosition");
-  var colorAttribLocation = gl.getAttribLocation(program, "vertColor");
+  var texCoordAttribLocation = gl.getAttribLocation(program, "vertTexCoord");
   gl.vertexAttribPointer(
     positionAttribLocation, //Attribute Location
     3, // number of elements per attribute
     gl.FLOAT, //type of elements
     gl.FALSE, //if data is normalized
-    6 * Float32Array.BYTES_PER_ELEMENT, //Size of an individual vertex
+    5 * Float32Array.BYTES_PER_ELEMENT, //Size of an individual vertex
     0 //offset from the beginning of a single vertex to out attribute
   );
   gl.enableVertexAttribArray(positionAttribLocation);
 
   //color attribute allocation
   gl.vertexAttribPointer(
-    colorAttribLocation, //Attribute Location
-    3, // number of elements per attribute
+    texCoordAttribLocation, //Attribute Location
+    2, // number of elements per attribute
     gl.FLOAT, //type of elements
     gl.FALSE, //if data is normalized
-    6 * Float32Array.BYTES_PER_ELEMENT, //Size of an individual vertex
+    5 * Float32Array.BYTES_PER_ELEMENT, //Size of an individual vertex
     3 * Float32Array.BYTES_PER_ELEMENT //offset from the beginning of a single vertex to out attribute
   );
-  gl.enableVertexAttribArray(colorAttribLocation);
+  gl.enableVertexAttribArray(texCoordAttribLocation);
+
+  //unbinding Buffers
+  gl.bindBuffer(gl.ARRAY_BUFFER, null); //unbind array buffer
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null); //unbind ibo
   //#endregion
+  //#endregion
+
+  //#region Textures
+  var boxTexture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, boxTexture);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texImage2D(
+    gl.TEXTURE_2D,
+    0, //level of detail
+    gl.RGBA,
+    gl.RGBA,
+    gl.UNSIGNED_BYTE,
+    document.getElementById("front_view")
+  );
+
+  gl.bindTexture(gl.TEXTURE_2D, null); //unbind text mem
   //#endregion
 
   //#region Matrices
@@ -219,15 +243,17 @@ var InitDemo = function () {
   gl.uniformMatrix4fv(matProjUniformLocation, gl.FALSE, projMatrix);
   //#endregion
 
-  //#region Textures
-
-  //#endregion
   // preperation for main render loop
   var angle = 0; // allocate mem for angle (needed in loop)
 
   //create identity matrix
   var identityMatrix = new Float32Array(16);
   identity(identityMatrix);
+
+  //binding necessary buffers
+  gl.bindBuffer(gl.ARRAY_BUFFER, skyboxVertexBufferObject);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, skyboxIndexBufferObject);
+  gl.bindTexture(gl.TEXTURE_2D, boxTexture);
 
   //main render loop
   function loop() {
@@ -239,12 +265,11 @@ var InitDemo = function () {
 
     //TODO: inner box rendering
     //skybox rendering
-    gl.bindBuffer(gl.ARRAY_BUFFER, skyboxVertexBufferObject);
 
     //rotation of the cube
     rotate(worldMatrix, identityMatrix, angle, [0, 1, 0]);
     //scaling of the cube
-    scale(worldMatrix, [1, 1, 1]);
+    //scale(worldMatrix, [10, 10, 10]);
 
     gl.uniformMatrix4fv(matWorldUniformLocation, gl.FALSE, worldMatrix);
 
