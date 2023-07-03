@@ -2,27 +2,26 @@
 //vertex shader
 var vertexShaderText = `
 precision mediump float;
-attribute vec3 vertPosition;
-attribute vec2 vertTexCoord;
-varying vec2 fragTexCoord;
+attribute vec4 vertPosition;
+varying vec3 v_normal;
 uniform mat4 mWorld;
 uniform mat4 mView;
 uniform mat4 mProj;
 
 void main() {
-    fragTexCoord = vertTexCoord;
-    gl_Position = mProj * mView * mWorld * vec4(vertPosition, 1.0);
+  v_normal = normalize(vertPosition.xyz);
+    gl_Position = mProj * mView * mWorld * vec4(vertPosition);
 }
 `;
 
 //fragment shader
 var fragmentShaderText = `
 precision mediump float;
-varying vec2 fragTexCoord;
-uniform sampler2D sampler;
+varying vec3 v_normal;
+uniform samplerCube cubeText;
 
 void main(){
-    gl_FragColor = texture2D(sampler, fragTexCoord);
+    gl_FragColor = textureCube(cubeText, normalize(v_normal));
 }
 `;
 //#endregion
@@ -42,7 +41,7 @@ var InitDemo = function () {
   gl.enable(gl.DEPTH_TEST); // activate the z-buffer algorithm
   gl.enable(gl.CULL_FACE); //enable backface culling
   gl.frontFace(gl.CCW); // front facing primitves are drawn counter clock wise
-  gl.cullFace(gl.BACK); // cut away the back faces.
+  gl.cullFace(gl.FRONT); // cut away the back faces.
   //#endregion
 
   //#region Create and Compile Shader Program
@@ -95,30 +94,30 @@ var InitDemo = function () {
   //create a buffer
   //create vertices write counterclockwise
   var skyboxVerts = [
-    // X, Y, Z   U,V
+    // X, Y, Z, w
     // Top
-    -1.0, 1.0, -1.0, 0, 0, -1.0, 1.0, 1.0, 0, 1, 1.0, 1.0, 1.0, 1, 1, 1.0, 1.0,
-    -1.0, 1, 0,
+    -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+    -1.0, 1.0,
 
     // Left
-    -1.0, 1.0, 1.0, 0, 0, -1.0, -1.0, 1.0, 0, 1, -1.0, -1.0, -1.0, 1, 1, -1.0,
-    1.0, -1.0, 1, 0,
+    -1.0, 1.0, 1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, -1.0, 1.0,
+    -1.0, 1.0,
 
     // Right
-    1.0, 1.0, 1.0, 0, 0, 1.0, -1.0, 1.0, 0, 1, 1.0, -1.0, -1.0, 1, 1, 1.0, 1.0,
-    -1.0, 1, 0,
+    1.0, 1.0, 1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0,
+    -1.0, 1.0,
 
     // Front
-    1.0, 1.0, 1.0, 0, 0, 1.0, -1.0, 1.0, 0, 1, -1.0, -1.0, 1.0, 1, 1, -1.0, 1.0,
-    1.0, 1, 0,
+    1.0, 1.0, 1.0, 1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0,
+    1.0, 1.0,
 
     // Back
-    1.0, 1.0, -1.0, 0, 0, 1.0, -1.0, -1.0, 0, 1, -1.0, -1.0, -1.0, 1, 1, -1.0,
-    1.0, -1.0, 1, 0,
+    1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0, -1.0, 1.0, -1.0, 1.0,
+    -1.0, 1.0,
 
     // Bottom
-    -1.0, -1.0, -1.0, 0, 0, -1.0, -1.0, 1.0, 0, 1, 1.0, -1.0, 1.0, 1, 1, 1.0,
-    -1.0, -1.0, 1, 0,
+    -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0, -1.0,
+    -1.0, 1.0,
   ];
 
   var boxIndices = [
@@ -168,27 +167,27 @@ var InitDemo = function () {
   // position attribute allocation
 
   var positionAttribLocation = gl.getAttribLocation(program, "vertPosition");
-  var texCoordAttribLocation = gl.getAttribLocation(program, "vertTexCoord");
+  //var texCoordAttribLocation = gl.getAttribLocation(program, "vertTexCoord");
   gl.vertexAttribPointer(
     positionAttribLocation, //Attribute Location
-    3, // number of elements per attribute
+    4, // number of elements per attribute
     gl.FLOAT, //type of elements
     gl.FALSE, //if data is normalized
-    5 * Float32Array.BYTES_PER_ELEMENT, //Size of an individual vertex
+    4 * Float32Array.BYTES_PER_ELEMENT, //Size of an individual vertex
     0 //offset from the beginning of a single vertex to out attribute
   );
   gl.enableVertexAttribArray(positionAttribLocation);
 
   //color attribute allocation
-  gl.vertexAttribPointer(
-    texCoordAttribLocation, //Attribute Location
-    2, // number of elements per attribute
-    gl.FLOAT, //type of elements
-    gl.FALSE, //if data is normalized
-    5 * Float32Array.BYTES_PER_ELEMENT, //Size of an individual vertex
-    3 * Float32Array.BYTES_PER_ELEMENT //offset from the beginning of a single vertex to out attribute
-  );
-  gl.enableVertexAttribArray(texCoordAttribLocation);
+  //gl.vertexAttribPointer(
+  //texCoordAttribLocation, //Attribute Location
+  //2, // number of elements per attribute
+  //gl.FLOAT, //type of elements
+  //gl.FALSE, //if data is normalized
+  //5 * Float32Array.BYTES_PER_ELEMENT, //Size of an individual vertex
+  //3 * Float32Array.BYTES_PER_ELEMENT //offset from the beginning of a single vertex to out attribute
+  //);
+  //gl.enableVertexAttribArray(texCoordAttribLocation);
 
   //unbinding Buffers
   gl.bindBuffer(gl.ARRAY_BUFFER, null); //unbind array buffer
@@ -197,22 +196,55 @@ var InitDemo = function () {
   //#endregion
 
   //#region Textures
+
   var boxTexture = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D, boxTexture);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  gl.texImage2D(
-    gl.TEXTURE_2D,
-    0, //level of detail
-    gl.RGBA,
-    gl.RGBA,
-    gl.UNSIGNED_BYTE,
-    document.getElementById("front_view")
+  gl.bindTexture(gl.TEXTURE_CUBE_MAP, boxTexture);
+  // getting the skybox images from the html document
+  const skyBoxFaces = [
+    {
+      target: gl.TEXTURE_CUBE_MAP_POSITIVE_X,
+      image: document.getElementById("right_view"),
+    },
+    {
+      target: gl.TEXTURE_CUBE_MAP_NEGATIVE_X,
+      image: document.getElementById("left_view"),
+    },
+    {
+      target: gl.TEXTURE_CUBE_MAP_POSITIVE_Y,
+      image: document.getElementById("top_view"),
+    },
+    {
+      target: gl.TEXTURE_CUBE_MAP_NEGATIVE_Y,
+      image: document.getElementById("bottom_view"),
+    },
+    {
+      target: gl.TEXTURE_CUBE_MAP_POSITIVE_Z,
+      image: document.getElementById("front_view"),
+    },
+    {
+      target: gl.TEXTURE_CUBE_MAP_NEGATIVE_Z,
+      image: document.getElementById("back_view"),
+    },
+  ];
+  skyBoxFaces.forEach((face) => {
+    const { target, image } = face;
+    gl.texImage2D(
+      target,
+      0, //level of detail
+      gl.RGBA,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      image
+    );
+  });
+  gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+  gl.texParameteri(
+    gl.TEXTURE_CUBE_MAP,
+    gl.TEXTURE_MIN_FILTER,
+    gl.LINEAR_MIPMAP_LINEAR
   );
 
-  gl.bindTexture(gl.TEXTURE_2D, null); //unbind text mem
+  gl.bindTexture(gl.TEXTURE_CUBE_MAP, null); //unbind text mem
   //#endregion
 
   //#region Matrices
@@ -243,7 +275,13 @@ var InitDemo = function () {
   gl.uniformMatrix4fv(matProjUniformLocation, gl.FALSE, projMatrix);
   //#endregion
 
-  // preperation for main render loop
+  //
+  //
+  //main
+  //
+  //
+
+  //prepration for render loop
   var angle = 0; // allocate mem for angle (needed in loop)
 
   //create identity matrix
@@ -253,7 +291,7 @@ var InitDemo = function () {
   //binding necessary buffers
   gl.bindBuffer(gl.ARRAY_BUFFER, skyboxVertexBufferObject);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, skyboxIndexBufferObject);
-  gl.bindTexture(gl.TEXTURE_2D, boxTexture);
+  gl.bindTexture(gl.TEXTURE_CUBE_MAP, boxTexture);
 
   //main render loop
   function loop() {
@@ -267,7 +305,7 @@ var InitDemo = function () {
     //skybox rendering
 
     //rotation of the cube
-    rotate(worldMatrix, identityMatrix, angle, [0, 1, 0]);
+    rotate(worldMatrix, identityMatrix, angle / 4, [0, 1, 0]);
     //scaling of the cube
     //scale(worldMatrix, [10, 10, 10]);
 
