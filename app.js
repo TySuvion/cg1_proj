@@ -38,9 +38,9 @@ var InitDemo = function () {
   //out is not acually doing the painting just choosing the paint
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); // do the actual painting of the background, by clearing the color buffer
   gl.enable(gl.DEPTH_TEST); // activate the z-buffer algorithm
-  gl.enable(gl.CULL_FACE); //enable backface culling
-  gl.frontFace(gl.CCW); // front facing primitves are drawn counter clock wise
-  gl.cullFace(gl.BACK); // cut away the back faces.
+  //gl.enable(gl.CULL_FACE); //enable backface culling
+  //gl.frontFace(gl.CCW); // front facing primitves are drawn counter clock wise
+  //gl.cullFace(gl.BACK); // cut away the back faces.
   //#endregion
 
   //#region Create and Compile Shader Program
@@ -92,31 +92,31 @@ var InitDemo = function () {
   //#region Buffer Data
   //create a buffer
   //create vertices write counterclockwise
-  var boxVertices = [
+  var skyboxVerts = [
     // X, Y, Z           R, G, B
     // Top
-    -1.0, 1.0, -1.0, 0.5, 0.5, 0.5, -1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0,
-    1.0, 0.5, 0.5, 0.5, 1.0, 1.0, -1.0, 0.5, 0.5, 0.5,
+    -1.0, 1.0, -1.0, 0.6, 0.6, 1, -1.0, 1.0, 1.0, 0.6, 0.6, 1, 1.0, 1.0, 1.0,
+    0.6, 0.6, 1, 1.0, 1.0, -1.0, 0.6, 0.6, 1,
 
     // Left
-    -1.0, 1.0, 1.0, 0.75, 0.25, 0.5, -1.0, -1.0, 1.0, 0.75, 0.25, 0.5, -1.0,
-    -1.0, -1.0, 0.75, 0.25, 0.5, -1.0, 1.0, -1.0, 0.75, 0.25, 0.5,
+    -1.0, 1.0, 1.0, 0.6, 0.6, 1, -1.0, -1.0, 1.0, 0.6, 0.6, 1, -1.0, -1.0, -1.0,
+    0.6, 0.6, 1, -1.0, 1.0, -1.0, 0.6, 0.6, 1,
 
     // Right
-    1.0, 1.0, 1.0, 0.25, 0.25, 0.75, 1.0, -1.0, 1.0, 0.25, 0.25, 0.75, 1.0,
-    -1.0, -1.0, 0.25, 0.25, 0.75, 1.0, 1.0, -1.0, 0.25, 0.25, 0.75,
+    1.0, 1.0, 1.0, 0.6, 0.6, 1, 1.0, -1.0, 1.0, 0.6, 0.6, 1, 1.0, -1.0, -1.0,
+    0.6, 0.6, 1, 1.0, 1.0, -1.0, 0.6, 0.6, 1,
 
     // Front
-    1.0, 1.0, 1.0, 1.0, 0.0, 0.15, 1.0, -1.0, 1.0, 1.0, 0.0, 0.15, -1.0, -1.0,
-    1.0, 1.0, 0.0, 0.15, -1.0, 1.0, 1.0, 1.0, 0.0, 0.15,
+    1.0, 1.0, 1.0, 0.6, 0.6, 1, 1.0, -1.0, 1.0, 0.6, 0.6, 1, -1.0, -1.0, 1.0,
+    0.6, 0.6, 1, -1.0, 1.0, 1.0, 0.6, 0.6, 1,
 
     // Back
-    1.0, 1.0, -1.0, 0.0, 1.0, 0.15, 1.0, -1.0, -1.0, 0.0, 1.0, 0.15, -1.0, -1.0,
-    -1.0, 0.0, 1.0, 0.15, -1.0, 1.0, -1.0, 0.0, 1.0, 0.15,
+    1.0, 1.0, -1.0, 0.6, 0.6, 1, 1.0, -1.0, -1.0, 0.6, 0.6, 1, -1.0, -1.0, -1.0,
+    0.6, 0.6, 1, -1.0, 1.0, -1.0, 0.6, 0.6, 1,
 
     // Bottom
-    -1.0, -1.0, -1.0, 0.5, 0.5, 1.0, -1.0, -1.0, 1.0, 0.5, 0.5, 1.0, 1.0, -1.0,
-    1.0, 0.5, 0.5, 1.0, 1.0, -1.0, -1.0, 0.5, 0.5, 1.0,
+    -1.0, -1.0, -1.0, 0.6, 0.6, 1, -1.0, -1.0, 1.0, 0.6, 0.6, 1, 1.0, -1.0, 1.0,
+    0.6, 0.6, 1, 1.0, -1.0, -1.0, 0.6, 0.6, 1,
   ];
 
   var boxIndices = [
@@ -141,13 +141,14 @@ var InitDemo = function () {
 
   //#endregion
   //#region Buffer Objects
-  //vertex buffer object
-  var boxVertexBufferObject = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, boxVertexBufferObject); //bind the buffer
+
+  //vertex buffer object for skybox
+  var skyboxVertexBufferObject = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, skyboxVertexBufferObject); //bind the buffer
   //give buffer data
   gl.bufferData(
     gl.ARRAY_BUFFER,
-    new Float32Array(boxVertices), //need to specify the type for the shader since js does not require us to
+    new Float32Array(skyboxVerts), //need to specify the type for the shader since js does not require us to
     gl.STATIC_DRAW
   );
 
@@ -216,6 +217,9 @@ var InitDemo = function () {
   gl.uniformMatrix4fv(matProjUniformLocation, gl.FALSE, projMatrix);
   //#endregion
 
+  //#region Textures
+
+  //#endregion
   // preperation for main render loop
   var angle = 0; // allocate mem for angle (needed in loop)
 
@@ -226,11 +230,19 @@ var InitDemo = function () {
   //main render loop
   function loop() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
     angle = (performance.now() / 1000 / 6) * 2 * Math.PI;
-    scale(worldMatrix, [1, 1, 1]);
-    //translate(viewMatrix, [0, 0, 0.1]);
+    //TODO: move camera around the cube.
     gl.uniformMatrix4fv(matViewUniformLocation, gl.FALSE, viewMatrix);
-    rotate(worldMatrix, identityMatrix, angle, [1, 1, 0]);
+
+    //TODO: inner box rendering
+    //skybox rendering
+    gl.bindBuffer(gl.ARRAY_BUFFER, skyboxVertexBufferObject);
+
+    //rotation of the cube
+    rotate(worldMatrix, identityMatrix, angle, [0, 1, 0]);
+    //scaling of the cube
+    scale(worldMatrix, [1, 1, 1]);
 
     gl.uniformMatrix4fv(matWorldUniformLocation, gl.FALSE, worldMatrix);
 
