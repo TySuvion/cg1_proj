@@ -200,8 +200,7 @@ var InitDemo = function () {
   var projMatrix = new Float32Array(16);
 
   glMatrix.mat4.identity(worldMatrix);
-  console.log(worldMatrix);
-  console.log(worldMatrix);
+  //TODO(Konrad): Look at und perspective func selber einbinden
   glMatrix.mat4.lookAt(viewMatrix, [0, 0, -10], [0, 0, 0], [0, 1, 0]);
   glMatrix.mat4.perspective(
     projMatrix,
@@ -308,7 +307,15 @@ function scale(out, v) {
   out[10] *= v[2];
   out[11] *= v[2];
 }
-
+/**
+ * multiplies the inserted matrix with a axis dependend rotation matrix.
+ * the result is saved in out.
+ * @param {Float32Array} out
+ * @param {Float32Array} ins
+ * @param {*} angle
+ * @param {Float32Array} v
+ * @returns
+ */
 function rotate(out, ins, angle, v) {
   const EPSILON = 0.000001;
   var x = v[0];
