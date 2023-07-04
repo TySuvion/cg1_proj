@@ -1,4 +1,3 @@
-//#region Shader Source Code
 //vertex shader
 var skyBoxVertShaderText = "";
 
@@ -25,7 +24,7 @@ var InitDemo = async function () {
   //#region Init WebGL
   //initialize webgl
   gl.clearColor(0.8, 0.8, 0.8, 1.0); //setting background color (R,G,B,A)
-  //out is not acually doing the painting just choosing the paint
+  //out is not actually doing the painting just choosing the paint
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); // do the actual painting of the background, by clearing the color buffer
   gl.enable(gl.DEPTH_TEST); // activate the z-buffer algorithm
   gl.enable(gl.CULL_FACE); //enable backface culling
@@ -109,24 +108,53 @@ var InitDemo = async function () {
     -1.0, 1.0,
   ];
 
+  var boxVertices = [
+    // X, Y, Z           R, G, B, A
+    // Top
+    -1.0, 1.0, -1.0, 0.5, 0.5, 0.5, 1.0, -1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0,
+    1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, -1.0, 0.5, 0.5, 0.5, 1.0,
+
+    // Left
+    -1.0, 1.0, 1.0, 0.75, 0.25, 0.5, 1.0, -1.0, -1.0, 1.0, 0.75, 0.25, 0.5, 1.0,
+    -1.0, -1.0, -1.0, 0.75, 0.25, 0.5, 1.0, -1.0, 1.0, -1.0, 0.75, 0.25, 0.5,
+    1.0,
+
+    // Right
+    1.0, 1.0, 1.0, 0.25, 0.25, 0.75, 1.0, 1.0, -1.0, 1.0, 0.25, 0.25, 0.75, 1.0,
+    1.0, -1.0, -1.0, 0.25, 0.25, 0.75, 1.0, 1.0, 1.0, -1.0, 0.25, 0.25, 0.75,
+    1.0,
+
+    // Front
+    1.0, 1.0, 1.0, 1.0, 0.0, 0.15, 1.0, 1.0, -1.0, 1.0, 1.0, 0.0, 0.15, 1.0,
+    -1.0, -1.0, 1.0, 1.0, 0.0, 0.15, 1.0, -1.0, 1.0, 1.0, 1.0, 0.0, 0.15, 1.0,
+
+    // Back
+    1.0, 1.0, -1.0, 0.0, 1.0, 0.15, 1.0, 1.0, -1.0, -1.0, 0.0, 1.0, 0.15, 1.0,
+    -1.0, -1.0, -1.0, 0.0, 1.0, 0.15, 1.0, -1.0, 1.0, -1.0, 0.0, 1.0, 0.15, 1.0,
+
+    // Bottom
+    -1.0, -1.0, -1.0, 0.5, 0.5, 1.0, 1.0, -1.0, -1.0, 1.0, 0.5, 0.5, 1.0, 1.0,
+    1.0, -1.0, 1.0, 0.5, 0.5, 1.0, 1.0, 1.0, -1.0, -1.0, 0.5, 0.5, 1.0, 1.0,
+  ];
+
   var boxIndices = [
     // Top
     0, 1, 2, 0, 2, 3,
 
     // Left
-    5, 4, 6, 6, 4, 7,
+    4, 5, 6, 4, 6, 7,
 
     // Right
     8, 9, 10, 8, 10, 11,
 
     // Front
-    13, 12, 14, 15, 14, 12,
+    12, 13, 14, 12, 14, 15,
 
     // Back
     16, 17, 18, 16, 18, 19,
 
     // Bottom
-    21, 20, 22, 22, 20, 23,
+    20, 21, 22, 20, 22, 23,
   ];
 
   //#endregion
@@ -181,6 +209,16 @@ var InitDemo = async function () {
   //unbinding Buffers
   gl.bindBuffer(gl.ARRAY_BUFFER, null); //unbind array buffer
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null); //unbind ibo
+
+  //gl.vertexAttribPointer(
+  //colorAttribLocation, //Attribute Location
+  //3, // number of elements per attribute
+  //gl.FLOAT, //type of elements
+  //gl.FALSE, //if data is normalized
+  //7 * Float32Array.BYTES_PER_ELEMENT, //Size of an individual vertex
+  //3 * Float32Array.BYTES_PER_ELEMENT //offset from the beginning of a single vertex to out attribute
+  //);
+  //gl.enableVertexAttribArray(colorAttribLocation);
   //#endregion
   //#endregion
 
@@ -281,6 +319,15 @@ var InitDemo = async function () {
   gl.bindBuffer(gl.ARRAY_BUFFER, skyboxVertexBufferObject);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, skyboxIndexBufferObject);
   gl.bindTexture(gl.TEXTURE_CUBE_MAP, boxTexture);
+  //TODO: Konrad tries stuff!
+
+  gl.disable(gl.CULL_FACE);
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+  // Enable depth testing
+  gl.enable(gl.DEPTH_TEST);
+  gl.depthFunc(gl.LEQUAL);
 
   //main render loop
   function loop() {
@@ -299,7 +346,6 @@ var InitDemo = async function () {
     //scale(worldMatrix, [10, 10, 10]);
 
     gl.uniformMatrix4fv(matWorldUniformLocation, gl.FALSE, worldMatrix);
-
     gl.drawElements(gl.TRIANGLES, boxIndices.length, gl.UNSIGNED_SHORT, 0);
 
     requestAnimationFrame(loop);
