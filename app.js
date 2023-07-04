@@ -186,6 +186,9 @@ var InitDemo = async function () {
     gl.CULL_FACE,
   ]);
 
+  gl.disable(gl.CULL_FACE);
+  gl.cullFace(gl.BACK);
+
   var skyBoxShaderProgram = await createAndCompileShaderProg(
     gl,
     skyBoxVertShaderText,
@@ -402,13 +405,18 @@ var InitDemo = async function () {
   gl.bindTexture(gl.TEXTURE_CUBE_MAP, boxTexture);
   //TODO: Konrad tries stuff!
 
-  gl.disable(gl.CULL_FACE);
+  //gl.disable(gl.CULL_FACE);
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
   // Enable depth testing
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);
+
+  //scale the skybox
+  let scaleVal = 30;
+  scale(worldMatrix, [scaleVal, scaleVal, scaleVal]);
+  gl.uniformMatrix4fv(matWorldUniformLocation, gl.FALSE, worldMatrix);
 
   //main render loop
   function loop() {
@@ -426,7 +434,6 @@ var InitDemo = async function () {
     //rotate(worldMatrix, identityMatrix, angle / 4, [0, 1, 0]);
 
     //scaling of the cube
-    //scale(worldMatrix, [5, 5, 5]);
 
     gl.uniformMatrix4fv(matWorldUniformLocation, gl.FALSE, worldMatrix);
     gl.drawElements(gl.TRIANGLES, boxIndices.length, gl.UNSIGNED_SHORT, 0);
