@@ -1,33 +1,22 @@
 //#region Shader Source Code
 //vertex shader
-var vertexShaderText = `
-precision mediump float;
-attribute vec4 vertPosition;
-varying vec3 v_normal;
-uniform mat4 mWorld;
-uniform mat4 mView;
-uniform mat4 mProj;
-
-void main() {
-  v_normal = normalize(vertPosition.xyz);
-    gl_Position = mProj * mView * mWorld * vec4(vertPosition);
-}
-`;
+var skyBoxVertShaderText = "";
 
 //fragment shader
-var fragmentShaderText = `
-precision mediump float;
-varying vec3 v_normal;
-uniform samplerCube cubeText;
+var skyBoxFragShaderText = "";
 
-void main(){
-    gl_FragColor = textureCube(cubeText, normalize(v_normal));
+async function getShaderSourceCode(url) {
+  let response = await fetch(url);
+  sourceCode = await response.text();
+  return sourceCode;
 }
-`;
 //#endregion
 
 //#region WebGL Program
-var InitDemo = function () {
+var InitDemo = async function () {
+  //getting shader src
+  skyBoxFragShaderText = await getShaderSourceCode("skyBoxFragShader.glsl");
+  skyBoxVertShaderText = await getShaderSourceCode("skyBoxVertShader.glsl");
   //#region Getting Context
   var canvas = document.getElementById("game-surface"); // get the canvas object from the html doc
   var gl = canvas.getContext("webgl"); // get the context webgl context from canvas
@@ -50,8 +39,8 @@ var InitDemo = function () {
   var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
 
   // set our shader source code
-  gl.shaderSource(vertexShader, vertexShaderText);
-  gl.shaderSource(fragmentShader, fragmentShaderText);
+  gl.shaderSource(vertexShader, skyBoxVertShaderText);
+  gl.shaderSource(fragmentShader, skyBoxFragShaderText);
 
   //compile the shader
   gl.compileShader(vertexShader);
