@@ -1,80 +1,113 @@
+//
+// global vars
+//
+var canvas; // canvas that is displayed on the webpage
 //vertex shader
 var skyBoxVertShaderText = "";
 
 //fragment shader
 var skyBoxFragShaderText = "";
-
+// functions
 async function getShaderSourceCode(url) {
   let response = await fetch(url);
   sourceCode = await response.text();
   return sourceCode;
 }
-//#endregion
+
+async function createAndCompileShaderProg(
+  webGLContext,
+  vertShaderCode,
+  fragShaderCode
+) {
+  //create shader program vars
+  var program = webGLContext.createProgram();
+  var vertShader = webGLContext.createShader(webGLContext.VERTEX_SHADER);
+  var fragShader = webGLContext.createShader(webGLContext.FRAGMENT_SHADER);
+
+  // set our shader source code
+  webGLContext.shaderSource(vertShader, vertShaderCode);
+  webGLContext.shaderSource(fragShader, fragShaderCode);
+
+  //compile the shader
+  webGLContext.compileShader(vertShader);
+  if (
+    !webGLContext.getShaderParameter(vertShader, webGLContext.COMPILE_STATUS)
+  ) {
+    console.error(
+      "ERROR: compiling vertex shader",
+      webGLContext.getShaderInfoLog(vertShader)
+    );
+    return;
+  }
+  webGLContext.compileShader(fragShader);
+  if (
+    !webGLContext.getShaderParameter(fragShader, webGLContext.COMPILE_STATUS)
+  ) {
+    console.error(
+      "ERROR: compiling fragment shader",
+      webGLContext.getShaderInfoLog(fragShader)
+    );
+    return;
+  }
+
+  webGLContext.attachShader(program, vertShader);
+  webGLContext.attachShader(program, fragShader);
+  webGLContext.linkProgram(program);
+  if (!webGLContext.getProgramParameter(program, webGLContext.LINK_STATUS)) {
+    console.log(
+      "ERROR linking program",
+      webGLContext.getProgramInfoLog(program)
+    );
+    return;
+  }
+  webGLContext.validateProgram(program);
+  if (
+    !webGLContext.getProgramParameter(program, webGLContext.VALIDATE_STATUS)
+  ) {
+    console.log(
+      "ERROR validating program",
+      webGLContext.getProgramInfoLog(program)
+    );
+    return;
+  }
+
+  return program;
+}
+
+function getWebGLContext(canvasID) {
+  canvas = document.getElementById(canvasID);
+  var webGLContext = canvas.getContext("webgl");
+  return webGLContext;
+}
+
+function setWebGLSettings(webGLContext) {
+  webGLContext.clearColor(0.8, 0.8, 0.8, 1.0);
+  webGLContext.clear(
+    webGLContext.COLOR_BUFFER_BIT | webGLContext.DEPTH_BUFFER_BIT
+  );
+  webGLContext.enable(webGLContext.DEPTH_TEST);
+  webGLContext.enable(webGLContext.CULL_FACE);
+  webGLContext.frontFace(webGLContext.CCW);
+  webGLContext.cullFace(webGLContext.FRONT);
+}
 
 //#region WebGL Program
 var InitDemo = async function () {
   //getting shader src
   skyBoxFragShaderText = await getShaderSourceCode("skyBoxFragShader.glsl");
   skyBoxVertShaderText = await getShaderSourceCode("skyBoxVertShader.glsl");
-  //#region Getting Context
-  var canvas = document.getElementById("game-surface"); // get the canvas object from the html doc
-  var gl = canvas.getContext("webgl"); // get the context webgl context from canvas
-  //#endregion
 
-  //#region Init WebGL
+  var gl = getWebGLContext("game-surface"); // get the context webgl context from canvas
+
   //initialize webgl
-  gl.clearColor(0.8, 0.8, 0.8, 1.0); //setting background color (R,G,B,A)
-  //out is not actually doing the painting just choosing the paint
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); // do the actual painting of the background, by clearing the color buffer
-  gl.enable(gl.DEPTH_TEST); // activate the z-buffer algorithm
-  gl.enable(gl.CULL_FACE); //enable backface culling
-  gl.frontFace(gl.CCW); // front facing primitves are drawn counter clock wise
-  gl.cullFace(gl.FRONT); // cut away the back faces.
-  //#endregion
+  setWebGLSettings(gl);
 
-  //#region Create and Compile Shader Program
-  //create shader
-  var vertexShader = gl.createShader(gl.VERTEX_SHADER);
-  var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-
-  // set our shader source code
-  gl.shaderSource(vertexShader, skyBoxVertShaderText);
-  gl.shaderSource(fragmentShader, skyBoxFragShaderText);
-
-  //compile the shader
-  gl.compileShader(vertexShader);
-  if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
-    console.error(
-      "ERROR: compiling vertex shader",
-      gl.getShaderInfoLog(vertexShader)
-    );
-    return;
-  }
-  gl.compileShader(fragmentShader);
-  if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
-    console.error(
-      "ERROR: compiling fragment shader",
-      gl.getShaderInfoLog(fragmentShader)
-    );
-    return;
-  }
-
-  //create shaderprogram and attach the shader
-  var program = gl.createProgram();
-  gl.attachShader(program, vertexShader);
-  gl.attachShader(program, fragmentShader);
-  gl.linkProgram(program);
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    console.log("ERROR linking program", gl.getProgramInfoLog(program));
-    return;
-  }
-  gl.validateProgram(program);
-  if (!gl.getProgramParameter(program, gl.VALIDATE_STATUS)) {
-    console.log("ERROR validating program", gl.getProgramInfoLog(program));
-    return;
-  }
-  gl.useProgram(program);
-  //#endregion
+  var skyBoxShaderProgram = await createAndCompileShaderProg(
+    gl,
+    skyBoxVertShaderText,
+    skyBoxFragShaderText
+  );
+  gl.useProgram(skyBoxShaderProgram);
 
   //#region Buffer
 
@@ -183,7 +216,10 @@ var InitDemo = async function () {
   //#region Attribute Location
   // position attribute allocation
 
-  var positionAttribLocation = gl.getAttribLocation(program, "vertPosition");
+  var positionAttribLocation = gl.getAttribLocation(
+    skyBoxShaderProgram,
+    "vertPosition"
+  );
   //var texCoordAttribLocation = gl.getAttribLocation(program, "vertTexCoord");
   gl.vertexAttribPointer(
     positionAttribLocation, //Attribute Location
@@ -276,9 +312,18 @@ var InitDemo = async function () {
 
   //#region Matrices
   // get the transfrom matrices location from vertex shader
-  var matWorldUniformLocation = gl.getUniformLocation(program, "mWorld");
-  var matViewUniformLocation = gl.getUniformLocation(program, "mView");
-  var matProjUniformLocation = gl.getUniformLocation(program, "mProj");
+  var matWorldUniformLocation = gl.getUniformLocation(
+    skyBoxShaderProgram,
+    "mWorld"
+  );
+  var matViewUniformLocation = gl.getUniformLocation(
+    skyBoxShaderProgram,
+    "mView"
+  );
+  var matProjUniformLocation = gl.getUniformLocation(
+    skyBoxShaderProgram,
+    "mProj"
+  );
 
   //create transform matrices
   var worldMatrix = new Float32Array(16);
@@ -287,7 +332,7 @@ var InitDemo = async function () {
 
   glMatrix.mat4.identity(worldMatrix);
   //TODO(Konrad): Look at und perspective func selber einbinden
-  glMatrix.mat4.lookAt(viewMatrix, [0, 0, -10], [0, 0, 0], [0, 1, 0]);
+  glMatrix.mat4.lookAt(viewMatrix, [0, 0, -5], [0, 0, 0], [0, 1, 0]);
   glMatrix.mat4.perspective(
     projMatrix,
     Math.PI / 4,
