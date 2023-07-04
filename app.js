@@ -242,6 +242,9 @@ var InitDemo = function () {
         gl.disable(gl.CULL_FACE);
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        
+        var utahVertices = loadObjFile("teapot.obj");
+        console.log(utahVertices);
 
   var worldMatrix2 = new Float32Array(16);
   identity(worldMatrix2);
