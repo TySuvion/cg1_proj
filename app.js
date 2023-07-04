@@ -416,15 +416,17 @@ var InitDemo = async function () {
 
     angle = (performance.now() / 1000 / 6) * 2 * Math.PI;
     //TODO: move camera around the cube.
+    rotate(viewMatrix, identityMatrix, angle / 4, [0, 1, 0]);
     gl.uniformMatrix4fv(matViewUniformLocation, gl.FALSE, viewMatrix);
 
     //TODO: inner box rendering
     //skybox rendering
 
     //rotation of the cube
-    rotate(worldMatrix, identityMatrix, angle / 4, [0, 1, 0]);
+    //rotate(worldMatrix, identityMatrix, angle / 4, [0, 1, 0]);
+
     //scaling of the cube
-    //scale(worldMatrix, [10, 10, 10]);
+    //scale(worldMatrix, [5, 5, 5]);
 
     gl.uniformMatrix4fv(matWorldUniformLocation, gl.FALSE, worldMatrix);
     gl.drawElements(gl.TRIANGLES, boxIndices.length, gl.UNSIGNED_SHORT, 0);
