@@ -80,15 +80,96 @@ function getWebGLContext(canvasID) {
   return webGLContext;
 }
 
-function setWebGLSettings(webGLContext) {
-  webGLContext.clearColor(0.8, 0.8, 0.8, 1.0);
+function setWebGLSettings(
+  webGLContext,
+  backgroundColor,
+  frontFaceOrientation,
+  cuttedFaces,
+  setEnabled
+) {
+  //set background
+  webGLContext.clearColor(
+    backgroundColor[0],
+    backgroundColor[1],
+    backgroundColor[2],
+    backgroundColor[3]
+  );
   webGLContext.clear(
     webGLContext.COLOR_BUFFER_BIT | webGLContext.DEPTH_BUFFER_BIT
   );
-  webGLContext.enable(webGLContext.DEPTH_TEST);
-  webGLContext.enable(webGLContext.CULL_FACE);
-  webGLContext.frontFace(webGLContext.CCW);
-  webGLContext.cullFace(webGLContext.FRONT);
+
+  //set face orientation
+  webGLContext.frontFace(frontFaceOrientation);
+  webGLContext.cullFace(cuttedFaces);
+
+  //enable chosen capabilities
+  setEnabled.forEach((element) => {
+    webGLContext.enable(element);
+  });
+}
+
+function createSkyBoxVBO(webGLContext) {
+  //TODO: hier weiter machen
+}
+
+function createSkyBoxTexture(
+  webGLContext,
+  topimageid,
+  bottomimageid,
+  frontimageid,
+  backimageid,
+  leftimageid,
+  rightimageid
+) {
+  var boxTexture = webGLContext.createTexture();
+  webGLContext.bindTexture(webGLContext.TEXTURE_CUBE_MAP, boxTexture);
+  // getting the skybox images from the html document
+  const skyBoxFaces = [
+    {
+      target: webGLContext.TEXTURE_CUBE_MAP_POSITIVE_X,
+      image: document.getElementById(rightimageid),
+    },
+    {
+      target: webGLContext.TEXTURE_CUBE_MAP_NEGATIVE_X,
+      image: document.getElementById(leftimageid),
+    },
+    {
+      target: webGLContext.TEXTURE_CUBE_MAP_POSITIVE_Y,
+      image: document.getElementById(topimageid),
+    },
+    {
+      target: webGLContext.TEXTURE_CUBE_MAP_NEGATIVE_Y,
+      image: document.getElementById(bottomimageid),
+    },
+    {
+      target: webGLContext.TEXTURE_CUBE_MAP_POSITIVE_Z,
+      image: document.getElementById(frontimageid),
+    },
+    {
+      target: webGLContext.TEXTURE_CUBE_MAP_NEGATIVE_Z,
+      image: document.getElementById(backimageid),
+    },
+  ];
+  skyBoxFaces.forEach((face) => {
+    const { target, image } = face;
+    webGLContext.texImage2D(
+      target,
+      0, //level of detail
+      webGLContext.RGBA,
+      webGLContext.RGBA,
+      webGLContext.UNSIGNED_BYTE,
+      image
+    );
+  });
+  webGLContext.generateMipmap(webGLContext.TEXTURE_CUBE_MAP);
+  webGLContext.texParameteri(
+    webGLContext.TEXTURE_CUBE_MAP,
+    webGLContext.TEXTURE_MIN_FILTER,
+    webGLContext.LINEAR_MIPMAP_LINEAR
+  );
+
+  webGLContext.bindTexture(webGLContext.TEXTURE_CUBE_MAP, null); //unbind text mem
+  return boxTexture;
 }
 
 //#region WebGL Program
@@ -100,7 +181,10 @@ var InitDemo = async function () {
   var gl = getWebGLContext("game-surface"); // get the context webgl context from canvas
 
   //initialize webgl
-  setWebGLSettings(gl);
+  setWebGLSettings(gl, [0.8, 0.8, 0.8, 1.0], gl.CCW, gl.FRONT, [
+    gl.DEPTH_TEST,
+    gl.CULL_FACE,
+  ]);
 
   var skyBoxShaderProgram = await createAndCompileShaderProg(
     gl,
@@ -109,9 +193,6 @@ var InitDemo = async function () {
   );
   gl.useProgram(skyBoxShaderProgram);
 
-  //#region Buffer
-
-  //#region Buffer Data
   //create a buffer
   //create vertices write counterclockwise
   var skyboxVerts = [
@@ -190,13 +271,15 @@ var InitDemo = async function () {
     20, 21, 22, 20, 22, 23,
   ];
 
-  //#endregion
-  //#region Buffer Objects
+  //------------------------------------------------
+  //
+  // Buffer
+  //
+  //------------------------------------------------
 
-  //vertex buffer object for skybox
+  //vbo skybox
   var skyboxVertexBufferObject = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, skyboxVertexBufferObject); //bind the buffer
-  //give buffer data
   gl.bufferData(
     gl.ARRAY_BUFFER,
     new Float32Array(skyboxVerts), //need to specify the type for the shader since js does not require us to
@@ -211,9 +294,7 @@ var InitDemo = async function () {
     new Uint16Array(boxIndices),
     gl.STATIC_DRAW
   );
-  //#endregion
 
-  //#region Attribute Location
   // position attribute allocation
 
   var positionAttribLocation = gl.getAttribLocation(
@@ -255,61 +336,16 @@ var InitDemo = async function () {
   //3 * Float32Array.BYTES_PER_ELEMENT //offset from the beginning of a single vertex to out attribute
   //);
   //gl.enableVertexAttribArray(colorAttribLocation);
-  //#endregion
-  //#endregion
 
-  //#region Textures
-
-  var boxTexture = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_CUBE_MAP, boxTexture);
-  // getting the skybox images from the html document
-  const skyBoxFaces = [
-    {
-      target: gl.TEXTURE_CUBE_MAP_POSITIVE_X,
-      image: document.getElementById("right_view"),
-    },
-    {
-      target: gl.TEXTURE_CUBE_MAP_NEGATIVE_X,
-      image: document.getElementById("left_view"),
-    },
-    {
-      target: gl.TEXTURE_CUBE_MAP_POSITIVE_Y,
-      image: document.getElementById("top_view"),
-    },
-    {
-      target: gl.TEXTURE_CUBE_MAP_NEGATIVE_Y,
-      image: document.getElementById("bottom_view"),
-    },
-    {
-      target: gl.TEXTURE_CUBE_MAP_POSITIVE_Z,
-      image: document.getElementById("front_view"),
-    },
-    {
-      target: gl.TEXTURE_CUBE_MAP_NEGATIVE_Z,
-      image: document.getElementById("back_view"),
-    },
-  ];
-  skyBoxFaces.forEach((face) => {
-    const { target, image } = face;
-    gl.texImage2D(
-      target,
-      0, //level of detail
-      gl.RGBA,
-      gl.RGBA,
-      gl.UNSIGNED_BYTE,
-      image
-    );
-  });
-  gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
-  gl.texParameteri(
-    gl.TEXTURE_CUBE_MAP,
-    gl.TEXTURE_MIN_FILTER,
-    gl.LINEAR_MIPMAP_LINEAR
+  var boxTexture = createSkyBoxTexture(
+    gl,
+    "top_view",
+    "bottom_view",
+    "front_view",
+    "back_view",
+    "left_view",
+    "right_view"
   );
-
-  gl.bindTexture(gl.TEXTURE_CUBE_MAP, null); //unbind text mem
-  //#endregion
-
   //#region Matrices
   // get the transfrom matrices location from vertex shader
   var matWorldUniformLocation = gl.getUniformLocation(
