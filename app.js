@@ -40,6 +40,8 @@ var InitDemo = async function () {
   //create general cube ibo
   var cubeIBO = createIBO(gl, boxIndices);
 
+  var transCubeVBO = createVBO(gl, boxVertices);
+
   //Texture
   var boxTexture = createSkyBoxTexture(
     gl,
@@ -51,44 +53,26 @@ var InitDemo = async function () {
     "right_view"
   );
 
-  //------------------------------------------------
-  //
-  // Matrices
-  //
-  //------------------------------------------------
-  // get the transfrom matrices location from vertex shader
-  var matWorldUniformLocation = gl.getUniformLocation(
-    skyBoxShaderProgram,
-    "mWorld"
-  );
-  var matViewUniformLocation = gl.getUniformLocation(
-    skyBoxShaderProgram,
-    "mView"
-  );
-  var matProjUniformLocation = gl.getUniformLocation(
-    skyBoxShaderProgram,
-    "mProj"
-  );
-
+  //Matrix
   //create transform matrices
+  var identityMatrix = new Float32Array(16);
   var worldMatrix = new Float32Array(16);
   var viewMatrix = new Float32Array(16);
   var projMatrix = new Float32Array(16);
 
-  identity(worldMatrix);
-  lookAt(viewMatrix, [0, 0, -5], [0, 0, 0], [0, 1, 0]);
-  perspective(
-    projMatrix,
-    Math.PI / 4,
-    canvas.clientWidth / canvas.clientHeight,
-    0.1,
-    1000.0
+  transformMatrices(identityMatrix, worldMatrix, viewMatrix, projMatrix);
+  sendMatricesToShader(
+    gl,
+    skyBoxShaderProgram,
+    worldMatrix,
+    viewMatrix,
+    projMatrix
   );
 
-  //send matrices data to vertex shader
-  gl.uniformMatrix4fv(matWorldUniformLocation, gl.FALSE, worldMatrix);
-  gl.uniformMatrix4fv(matViewUniformLocation, gl.FALSE, viewMatrix);
-  gl.uniformMatrix4fv(matProjUniformLocation, gl.FALSE, projMatrix);
+  // for the transparent cube a second world matrix
+  var worldMatrix2 = new Float32Array(16);
+  identity(worldMatrix2);
+
   //#endregion
 
   //------------------------------------------------
@@ -100,18 +84,9 @@ var InitDemo = async function () {
   //prepration for render loop
   var angle = 0; // allocate mem for angle (needed in loop)
 
-  //create identity matrix
-  var identityMatrix = new Float32Array(16);
-  identity(identityMatrix);
-
-  //binding necessary buffers
-  //skybox buffer
   bindSkyboxCubeBuffer(gl, skyboxVBO, cubeIBO, skyBoxShaderProgram);
-  //gl.bindBuffer(gl.ARRAY_BUFFER, skyboxVBO);
 
-  //generall cube ibo
-  //gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeIBO);
-  gl.bindTexture(gl.TEXTURE_CUBE_MAP, boxTexture);
+  //gl.bindTexture(gl.TEXTURE_CUBE_MAP, boxTexture);
 
   //gl.disable(gl.CULL_FACE);
   gl.enable(gl.BLEND);
@@ -124,7 +99,12 @@ var InitDemo = async function () {
   //scale the skybox
   let scaleVal = 30;
   scale(worldMatrix, [scaleVal, scaleVal, scaleVal]);
-  gl.uniformMatrix4fv(matWorldUniformLocation, gl.FALSE, worldMatrix);
+  sendWorldMatrixToShader(gl, skyBoxShaderProgram, worldMatrix);
+
+  //transcube transforms
+  translate(worldMatrix2, [0, 0, 0]);
+  rotate(worldMatrix2, identityMatrix, Math.PI / 16, [0, 1, 0]);
+  scale(worldMatrix2, [1, 1, 1]);
 
   //main render loop
   function loop() {
@@ -133,9 +113,8 @@ var InitDemo = async function () {
     angle = (performance.now() / 1000 / 6) * 2 * Math.PI;
     //TODO: move camera around the cube.
     rotate(viewMatrix, identityMatrix, angle / 20, [0, 1, 0]);
-    gl.uniformMatrix4fv(matViewUniformLocation, gl.FALSE, viewMatrix);
+    sendViewMatrixToShader(gl, skyBoxShaderProgram, viewMatrix);
 
-    gl.uniformMatrix4fv(matWorldUniformLocation, gl.FALSE, worldMatrix);
     gl.drawElements(gl.TRIANGLES, boxIndices.length, gl.UNSIGNED_SHORT, 0);
 
     requestAnimationFrame(loop);
@@ -429,7 +408,7 @@ function createSkyBoxTexture(
     webGLContext.LINEAR_MIPMAP_LINEAR
   );
 
-  webGLContext.bindTexture(webGLContext.TEXTURE_CUBE_MAP, null); //unbind text mem
+  //webGLContext.bindTexture(webGLContext.TEXTURE_CUBE_MAP, null); //unbind text mem
   return boxTexture;
 }
 
@@ -532,4 +511,78 @@ function bindSkyboxCubeBuffer(webGLContext, vbo, ibo, program) {
   webGLContext.enableVertexAttribArray(vertPositionLoc);
 
   webGLContext.bindBuffer(webGLContext.ELEMENT_ARRAY_BUFFER, ibo);
+}
+
+function transformMatrices(mIdentity, mWorld, mView, mProjection) {
+  identity(mIdentity);
+  identity(mWorld);
+  lookAt(mView, [0, 0, -5], [0, 0, 0], [0, 1, 0]);
+  perspective(
+    mProjection,
+    Math.PI / 4,
+    canvas.clientWidth / canvas.clientHeight,
+    0.1,
+    1000.0
+  );
+}
+
+function sendMatricesToShader(
+  webGLContext,
+  shaderProgram,
+  mWorld,
+  mView,
+  mProj
+) {
+  var matWorldUniformLocation = webGLContext.getUniformLocation(
+    shaderProgram,
+    "mWorld"
+  );
+  var matViewUniformLocation = webGLContext.getUniformLocation(
+    shaderProgram,
+    "mView"
+  );
+  var matProjUniformLocation = webGLContext.getUniformLocation(
+    shaderProgram,
+    "mProj"
+  );
+
+  //send matrices data to vertex shader
+  webGLContext.uniformMatrix4fv(
+    matWorldUniformLocation,
+    webGLContext.FALSE,
+    mWorld
+  );
+  webGLContext.uniformMatrix4fv(
+    matViewUniformLocation,
+    webGLContext.FALSE,
+    mView
+  );
+  webGLContext.uniformMatrix4fv(
+    matProjUniformLocation,
+    webGLContext.FALSE,
+    mProj
+  );
+}
+function sendWorldMatrixToShader(webGLContext, shaderProgram, mWorld) {
+  var matWorldUniformLocation = webGLContext.getUniformLocation(
+    shaderProgram,
+    "mWorld"
+  );
+  webGLContext.uniformMatrix4fv(
+    matWorldUniformLocation,
+    webGLContext.FALSE,
+    mWorld
+  );
+}
+
+function sendViewMatrixToShader(webGLContext, shaderProgram, mView) {
+  var matWorldUniformLocation = webGLContext.getUniformLocation(
+    shaderProgram,
+    "mView"
+  );
+  webGLContext.uniformMatrix4fv(
+    matWorldUniformLocation,
+    webGLContext.FALSE,
+    mView
+  );
 }
