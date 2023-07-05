@@ -12,10 +12,21 @@ var InitDemo = async function () {
     "shaders/skyBoxVertShader.glsl"
   );
 
+  vertShaderText = await getShaderSourceCode("shaders/vertexShader.glsl");
+  fragShaderTransparent = await getShaderSourceCode(
+    "shaders/fragmentShader.glsl"
+  );
+
   var gl = getWebGLContext("game-surface"); // get the context webgl context from canvas
 
   //initialize webgl
   setWebGLSettings(gl, [0.8, 0.8, 0.8, 1.0], gl.CCW, gl.FRONT, [gl.DEPTH_TEST]);
+
+  var transparentShaderProgram = await createAndCompileShaderProg(
+    gl,
+    vertShaderText,
+    fragShaderTransparent
+  );
 
   var skyBoxShaderProgram = await createAndCompileShaderProg(
     gl,
@@ -130,7 +141,7 @@ var InitDemo = async function () {
 
     angle = (performance.now() / 1000 / 6) * 2 * Math.PI;
     //TODO: move camera around the cube.
-    rotate(viewMatrix, identityMatrix, angle / 4, [0, 1, 0]);
+    rotate(viewMatrix, identityMatrix, angle / 20, [0, 1, 0]);
     gl.uniformMatrix4fv(matViewUniformLocation, gl.FALSE, viewMatrix);
 
     gl.uniformMatrix4fv(matWorldUniformLocation, gl.FALSE, worldMatrix);
@@ -149,8 +160,10 @@ var InitDemo = async function () {
 var canvas; // canvas that is displayed on the webpage
 //vertex shader
 var skyBoxVertShaderText = "";
+var vertShaderText = "";
 //fragment shader
 var skyBoxFragShaderText = "";
+var fragShaderTransparent = "";
 //vertecies and indecies
 var skyboxVerts = [
   // X, Y, Z, w
