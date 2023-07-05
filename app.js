@@ -5,8 +5,12 @@
 //------------------------------------------------
 var InitDemo = async function () {
   //getting shader src
-  skyBoxFragShaderText = await getShaderSourceCode("skyBoxFragShader.glsl");
-  skyBoxVertShaderText = await getShaderSourceCode("skyBoxVertShader.glsl");
+  skyBoxFragShaderText = await getShaderSourceCode(
+    "shaders/skyBoxFragShader.glsl"
+  );
+  skyBoxVertShaderText = await getShaderSourceCode(
+    "shaders/skyBoxVertShader.glsl"
+  );
 
   var gl = getWebGLContext("game-surface"); // get the context webgl context from canvas
 
@@ -19,8 +23,6 @@ var InitDemo = async function () {
     skyBoxFragShaderText
   );
   gl.useProgram(skyBoxShaderProgram);
-
-  //create a buffer
 
   //create skybox vbo
   var { skyboxVBO, skyboxPosAttribPointer } = createSkyBoxVBO(
@@ -89,6 +91,10 @@ var InitDemo = async function () {
   //
   //------------------------------------------------
 
+  function drawSkyBox() {
+    //todo: hier weiter machen
+  }
+
   //prepration for render loop
   var angle = 0; // allocate mem for angle (needed in loop)
 
@@ -104,7 +110,6 @@ var InitDemo = async function () {
   //generall cube ibo
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeIBO);
   gl.bindTexture(gl.TEXTURE_CUBE_MAP, boxTexture);
-  //TODO: Konrad tries stuff!
 
   //gl.disable(gl.CULL_FACE);
   gl.enable(gl.BLEND);
