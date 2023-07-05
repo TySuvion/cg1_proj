@@ -500,3 +500,59 @@ function createCubeIBO(webGLContext, cubeIndices) {
   webGLContext.bindBuffer(webGLContext.ELEMENT_ARRAY_BUFFER, null); //unbind ibo
   return ibo;
 }
+/**
+ * binds the transcube buffer and enables the attriblocs
+ * @param {*} webGLContext
+ * @param {*} buffer
+ * @param {*} program
+ */
+function bindTransCubeBuffer(webGLContext, vbo, ibo, program) {
+  webGLContext.useProgram(program);
+  webGLContext.bindBuffer(webGLContext.ARRAY_BUFFER, vbo);
+  var vertPositionLoc = webGLContext.getAttribLocation(program, "vertPosition");
+  var vertColorLoc = webGLContext.getAttribLocation(program, "vertColor");
+  webGLContext.vertexAttribPointer(
+    vertPositionLoc, //Attribute Location
+    3, // number of elements per attribute
+    webGLContext.FLOAT, //type of elements
+    webGLContext.FALSE, //if data is normalized
+    7 * Float32Array.BYTES_PER_ELEMENT, //Size of an individual vertex
+    0 //offset from the beginning of a single vertex to out attribute
+  );
+  webGLContext.enableVertexAttribArray(vertPositionLoc);
+
+  webGLContext.vertexAttribPointer(
+    vertColorLoc, //Attribute Location
+    3, // number of elements per attribute
+    webGLContext.FLOAT, //type of elements
+    webGLContext.FALSE, //if data is normalized
+    7 * Float32Array.BYTES_PER_ELEMENT, //Size of an individual vertex
+    3 //offset from the beginning of a single vertex to out attribute
+  );
+  webGLContext.enableVertexAttribArray(vertColorLoc);
+
+  webGLContext.bindBuffer(webGLContext.ELEMENT_ARRAY_BUFFER, ibo);
+}
+
+/**
+ * binds the skybox buffer and enables the attriblocs
+ * @param {*} webGLContext
+ * @param {*} buffer
+ * @param {*} program
+ */
+function bindSkyboxCubeBuffer(webGLContext, vbo, ibo, program) {
+  webGLContext.useProgram(program);
+  webGLContext.bindBuffer(webGLContext.ARRAY_BUFFER, vbo);
+  var vertPositionLoc = webGLContext.getAttribLocation(program, "vertPosition");
+  webGLContext.vertexAttribPointer(
+    vertPositionLoc, //Attribute Location
+    4, // number of elements per attribute
+    webGLContext.FLOAT, //type of elements
+    webGLContext.FALSE, //if data is normalized
+    4 * Float32Array.BYTES_PER_ELEMENT, //Size of an individual vertex
+    0 //offset from the beginning of a single vertex to out attribute
+  );
+  webGLContext.enableVertexAttribArray(vertPositionLoc);
+
+  webGLContext.bindBuffer(webGLContext.ELEMENT_ARRAY_BUFFER, ibo);
+}
