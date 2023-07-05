@@ -79,9 +79,9 @@ var InitDemo = async function () {
   var viewMatrix = new Float32Array(16);
   var projMatrix = new Float32Array(16);
 
-  glMatrix.mat4.identity(worldMatrix);
+  identity(worldMatrix);
   lookAt(viewMatrix, [0, 0, -5], [0, 0, 0], [0, 1, 0]);
-  glMatrix.mat4.perspective(
+  perspective(
     projMatrix,
     Math.PI / 4,
     canvas.clientWidth / canvas.clientHeight,

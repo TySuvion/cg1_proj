@@ -112,13 +112,49 @@ function identity(out) {
   out[15] = 1.0;
 }
 
+/**
+ * creates a projection matrix.
+ * @param {Float32Array} out
+ * @param {number} fovy
+ * @param {number} aspect
+ * @param {number} near
+ * @param {number} far
+ */
 function perspective(out, fovy, aspect, near, far) {
-  //TODO: implement
+  var f = 1.0 / Math.tan(fovy / 2);
+  out[0] = f / aspect;
+  out[1] = 0;
+  out[2] = 0;
+  out[3] = 0;
+  out[4] = 0;
+  out[5] = f;
+  out[6] = 0;
+  out[7] = 0;
+  out[8] = 0;
+  out[9] = 0;
+  out[11] = -1;
+  out[12] = 0;
+  out[13] = 0;
+  out[15] = 0;
+
+  if (far != null && far != Infinity) {
+    var nf = 1 / (near - far);
+    out[10] = (far + near) * nf;
+    out[14] = 2 * far * near * nf;
+  } else {
+    out[10] = -1;
+    out[14] = -2 * near;
+  }
 }
 
+/**
+ * creates a view matrix
+ * @param {Float32Array} out
+ * @param {Float32Array} eye
+ * @param {Float32Array} look
+ * @param {Float32Array} up
+ */
 function lookAt(out, eye, look, up) {
-  //TODO: implement
-
   //n = eye - look (z achse)
   var n0 = eye[0] - look[0];
   var n1 = eye[1] - look[1];
