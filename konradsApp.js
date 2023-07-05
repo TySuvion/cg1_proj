@@ -23,10 +23,19 @@ void main(){
 }
 `;
 
+var vertexShaderTransparent = "";
+var fragmentShaderTransparent = "";
+
+
+//var utahVertices = loadObjFile("teapot.obj");
+
+
 //#endregion
 
 //#region WebGL Program
-var InitDemo = function () {
+var InitDemoK = async function() {
+    vertexShaderTransparent = await getShaderSourceCode("shaders/vertexShader.glsl");
+    fragmentShaderTransparent = await getShaderSourceCode("shaders/fragmentShaderTransparent.glsl")
     //#region Getting Context
     var canvas = document.getElementById("game-surface"); // get the canvas object from the html doc
     var gl = canvas.getContext("webgl"); // get the context webgl context from canvas
@@ -153,54 +162,43 @@ var InitDemo = function () {
     ];
 
     //#endregion
-    //#region Buffer Objects
-    //vertex buffer object
-    var boxVertexBufferObject = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, boxVertexBufferObject); //bind the buffer
-    //give buffer data
-    gl.bufferData(
-        gl.ARRAY_BUFFER,
-        new Float32Array(boxVertices), //need to specify the type for the shader since js does not require us to
-        gl.STATIC_DRAW
-    );
+    function bindBoxBuffers(program) {
+        // Vertex buffer object
+        var boxVertexBufferObject = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, boxVertexBufferObject);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(boxVertices), gl.STATIC_DRAW);
 
-    //index buffer object
-    var boxIndexBufferObject = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, boxIndexBufferObject);
-    gl.bufferData(
-        gl.ELEMENT_ARRAY_BUFFER,
-        new Uint16Array(boxIndices),
-        gl.STATIC_DRAW
-    );
-    //#endregion
+        // Index buffer object
+        var boxIndexBufferObject = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, boxIndexBufferObject);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(boxIndices), gl.STATIC_DRAW);
 
-    //#region Attribute Location
-    // position attribute allocation
-    var positionAttribLocation = gl.getAttribLocation(program, "vertPosition");
-    var colorAttribLocation = gl.getAttribLocation(program, "vertColor");
-    gl.vertexAttribPointer(
-        positionAttribLocation, //Attribute Location
-        3, // number of elements per attribute
-        gl.FLOAT, //type of elements
-        gl.FALSE, //if data is normalized
-        7 * Float32Array.BYTES_PER_ELEMENT, //Size of an individual vertex
-        0 //offset from the beginning of a single vertex to out attribute
-    );
-    gl.enableVertexAttribArray(positionAttribLocation);
+        // Attribute locations
+        var positionAttribLocation = gl.getAttribLocation(program, "vertPosition");
+        var colorAttribLocation = gl.getAttribLocation(program, "vertColor");
 
-    //color attribute allocation
-    gl.vertexAttribPointer(
-        colorAttribLocation, //Attribute Location
-        3, // number of elements per attribute
-        gl.FLOAT, //type of elements
-        gl.FALSE, //if data is normalized
-        7 * Float32Array.BYTES_PER_ELEMENT, //Size of an individual vertex
-        3 * Float32Array.BYTES_PER_ELEMENT //offset from the beginning of a single vertex to out attribute
-    );
-    gl.enableVertexAttribArray(positionAttribLocation);
-    gl.enableVertexAttribArray(colorAttribLocation);
-    //#endregion
-    //#endregion
+        // Set up vertex attribute pointers for position
+        gl.vertexAttribPointer(
+            positionAttribLocation,
+            3,
+            gl.FLOAT,
+            gl.FALSE,
+            7 * Float32Array.BYTES_PER_ELEMENT,
+            0
+        );
+        gl.enableVertexAttribArray(positionAttribLocation);
+
+        // Set up vertex attribute pointers for color
+        gl.vertexAttribPointer(
+            colorAttribLocation,
+            3,
+            gl.FLOAT,
+            gl.FALSE,
+            7 * Float32Array.BYTES_PER_ELEMENT,
+            3 * Float32Array.BYTES_PER_ELEMENT
+        );
+        gl.enableVertexAttribArray(colorAttribLocation);
+    }
 
     //#region Matrices
     // get the transfrom matrices location from vertex shader
@@ -243,9 +241,6 @@ var InitDemo = function () {
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
-    var utahVertices = loadObjFile("teapot.obj");
-    console.log(utahVertices);
-
     var worldMatrix2 = new Float32Array(16);
     identity(worldMatrix2);
     translate(worldMatrix2,[0, 0, 0]);
@@ -259,16 +254,13 @@ var InitDemo = function () {
     //main render loop
     function loop() {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        bindBoxBuffers(program);
         angle = (performance.now() / 1000 / 6) * 2 * Math.PI;
 
         //animation setup
         scale(worldMatrix, [1, 1, 1]);
-        //translate(viewMatrix, [0, 0, 0.1]);
         gl.uniformMatrix4fv(matViewUniformLocation, gl.FALSE, viewMatrix);
         rotate(worldMatrix, identityMatrix, angle, [1, 1, 0]);
-        //second Cube
-        gl.uniformMatrix4fv(matWorldUniformLocation, gl.FALSE, worldMatrix2);
-        gl.drawElements(gl.TRIANGLES, boxIndices.length, gl.UNSIGNED_SHORT, 0);
 
         //first cube
         gl.uniformMatrix4fv(matWorldUniformLocation, gl.FALSE, worldMatrix);
