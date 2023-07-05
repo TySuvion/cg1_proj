@@ -36,13 +36,9 @@ var InitDemo = async function () {
   gl.useProgram(skyBoxShaderProgram);
 
   //create skybox vbo
-  var { skyboxVBO, skyboxPosAttribPointer } = createSkyBoxVBO(
-    gl,
-    skyBoxShaderProgram,
-    skyboxVerts
-  );
+  var skyboxVBO = createVBO(gl, skyboxVerts);
   //create general cube ibo
-  var cubeIBO = createCubeIBO(gl, boxIndices);
+  var cubeIBO = createIBO(gl, boxIndices);
 
   //Texture
   var boxTexture = createSkyBoxTexture(
@@ -101,10 +97,6 @@ var InitDemo = async function () {
   //
   //------------------------------------------------
 
-  function drawSkyBox() {
-    //todo: hier weiter machen
-  }
-
   //prepration for render loop
   var angle = 0; // allocate mem for angle (needed in loop)
 
@@ -114,11 +106,11 @@ var InitDemo = async function () {
 
   //binding necessary buffers
   //skybox buffer
-  gl.bindBuffer(gl.ARRAY_BUFFER, skyboxVBO);
-  gl.enableVertexAttribArray(skyboxPosAttribPointer);
+  bindSkyboxCubeBuffer(gl, skyboxVBO, cubeIBO, skyBoxShaderProgram);
+  //gl.bindBuffer(gl.ARRAY_BUFFER, skyboxVBO);
 
   //generall cube ibo
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeIBO);
+  //gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeIBO);
   gl.bindTexture(gl.TEXTURE_CUBE_MAP, boxTexture);
 
   //gl.disable(gl.CULL_FACE);
@@ -450,9 +442,7 @@ function createSkyBoxTexture(
  * @param {Float32Array} vertices
  * @returns {ArrayBuffer, AttribPointer} vbo, attribLoc
  */
-function createSkyBoxVBO(webGLContext, shaderProgram, vertices) {
-  //create vertices write counterclockwise
-
+function createVBO(webGLContext, vertices) {
   //vbo skybox
   var vbo = webGLContext.createBuffer();
   webGLContext.bindBuffer(webGLContext.ARRAY_BUFFER, vbo); //bind the buffer
@@ -462,22 +452,9 @@ function createSkyBoxVBO(webGLContext, shaderProgram, vertices) {
     webGLContext.STATIC_DRAW
   );
 
-  //set attrib pointer
-  var attribLoc = webGLContext.getAttribLocation(shaderProgram, "vertPosition");
-
-  webGLContext.vertexAttribPointer(
-    attribLoc, //Attribute Location
-    4, // number of elements per attribute
-    webGLContext.FLOAT, //type of elements
-    webGLContext.FALSE, //if data is normalized
-    4 * Float32Array.BYTES_PER_ELEMENT, //Size of an individual vertex
-    0 //offset from the beginning of a single vertex to out attribute
-  );
-  webGLContext.enableVertexAttribArray(attribLoc);
-
   webGLContext.bindBuffer(webGLContext.ARRAY_BUFFER, null); //unbind array buffer
 
-  return [vbo, attribLoc];
+  return vbo;
 }
 
 /**
@@ -486,7 +463,7 @@ function createSkyBoxVBO(webGLContext, shaderProgram, vertices) {
  * @param {Float32Array} cubeIndices
  * @returns index buffer object
  */
-function createCubeIBO(webGLContext, cubeIndices) {
+function createIBO(webGLContext, cubeIndices) {
   //box indices
 
   var ibo = webGLContext.createBuffer();
