@@ -80,8 +80,7 @@ var InitDemo = async function () {
   var projMatrix = new Float32Array(16);
 
   glMatrix.mat4.identity(worldMatrix);
-  //TODO(Konrad): Look at und perspective func selber einbinden
-  glMatrix.mat4.lookAt(viewMatrix, [0, 0, -5], [0, 0, 0], [0, 1, 0]);
+  lookAt(viewMatrix, [0, 0, -5], [0, 0, 0], [0, 1, 0]);
   glMatrix.mat4.perspective(
     projMatrix,
     Math.PI / 4,
