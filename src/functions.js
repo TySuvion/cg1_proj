@@ -1,336 +1,6 @@
-//------------------------------------------------
-//
-// main init webGL porgram
-//
-//------------------------------------------------
-var InitDemo = async function () {
-  setUpButtonControls();
-
-  var gl = getWebGLContext("game-surface"); // get the context webgl context from canvas
-
-  //initialize webgl
-  setWebGLSettings(gl, [0.8, 0.8, 0.8, 1.0], gl.CCW, gl.FRONT, [gl.DEPTH_TEST]);
-
-  //-------------------------------------------------------------------------
-  // SHADER
-  //-------------------------------------------------------------------------
-
-  //getting shader src
-  vertShaderText = await getShaderSourceCode("shaders/vertexShader.glsl");
-
-  skyBoxFragShaderText = await getShaderSourceCode(
-    "shaders/skyBoxFragShader.glsl"
-  );
-  skyBoxVertShaderText = await getShaderSourceCode(
-    "shaders/skyBoxVertShader.glsl"
-  );
-  fragShaderTransparent = await getShaderSourceCode(
-    "shaders/fragmentShaderTransparent.glsl"
-  );
-  vertShaderTeapotText = await getShaderSourceCode(
-    "shaders/vertexShaderNormals.glsl"
-  );
-  fragShaderTeapotText = await getShaderSourceCode(
-    "shaders/fragmentShaderNormals.glsl"
-  );
-
-  //creating and compiling the shader programs
-  var teapotShaderProgram = await createAndCompileShaderProg(
-    gl,
-    vertShaderTeapotText,
-    fragShaderTeapotText
-  );
-
-  var transparentShaderProgram = await createAndCompileShaderProg(
-    gl,
-    vertShaderText,
-    fragShaderTransparent
-  );
-
-  var skyBoxShaderProgram = await createAndCompileShaderProg(
-    gl,
-    skyBoxVertShaderText,
-    skyBoxFragShaderText
-  );
-  gl.useProgram(skyBoxShaderProgram);
-
-  //-------------------------------------------------------------------------
-  // BUFFER
-  //-------------------------------------------------------------------------
-  //create skybox vbo
-  var skyboxVBO = createVBO(gl, skyboxVerts);
-  //create general cube ibo
-  var cubeIBO = createIBO(gl, cubeIndices);
-  //transparent Cube VBO
-  var transCubeVBO = createVBO(gl, cubeVertices);
-  //teapotvbo
-  var teapotVBO = createVBO(gl, teapotVertices);
-  //teapot normals vbo
-  var teapotVBOnormals = createVBO(gl, teapotNormals);
-  //teapot ibo
-  var teapotIBO = createIBO(gl, teapotIndices);
-
-  //-------------------------------------------------------------------------
-  // TEXTURE
-  //-------------------------------------------------------------------------
-  var boxTexture = createSkyBoxTexture(
-    gl,
-    "top_view",
-    "bottom_view",
-    "front_view",
-    "back_view",
-    "left_view",
-    "right_view"
-  );
-
-  //-------------------------------------------------------------------------
-  // MATRICES
-  //-------------------------------------------------------------------------
-  //create transform matrices
-  var identityMatrix = new Float32Array(16);
-  var skyboxMatrix = new Float32Array(16);
-  var cubeMatrix = new Float32Array(16);
-  var teapotMatrix = new Float32Array(16);
-  var viewMatrix = new Float32Array(16);
-  var projMatrix = new Float32Array(16);
-
-  transformMatrices(
-    identityMatrix,
-    [skyboxMatrix, cubeMatrix, teapotMatrix],
-    viewMatrix,
-    projMatrix
-  );
-
-  //prepration for render loop
-  var angle = 0; // allocate mem for angle (needed in loop)
-
-  //bind the skybox texture
-  gl.bindTexture(gl.TEXTURE_CUBE_MAP, boxTexture);
-
-  gl.enable(gl.BLEND);
-  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-
-  // Enable depth testing
-  gl.depthFunc(gl.LEQUAL);
-
-  //-------------------------------------------------------------------------
-  // skybox transforms
-  //-------------------------------------------------------------------------
-  //scale the skybox
-  let skyboxScaleVal = 50;
-  scale(skyboxMatrix, [skyboxScaleVal, skyboxScaleVal, skyboxScaleVal]);
-  sendMatricesToShader(
-    gl,
-    skyBoxShaderProgram,
-    skyboxMatrix,
-    viewMatrix,
-    projMatrix
-  );
-
-  //-------------------------------------------------------------------------
-  // transparent cube transforms
-  //-------------------------------------------------------------------------
-  translate(cubeMatrix, [0, 0, 0]);
-  scale(cubeMatrix, [1, 1, 1]);
-  sendMatricesToShader(
-    gl,
-    transparentShaderProgram,
-    cubeMatrix,
-    viewMatrix,
-    projMatrix
-  );
-
-  //-------------------------------------------------------------------------
-  // teapot transforms
-  //-------------------------------------------------------------------------
-  let teapotScaleVal = 0.25;
-  translate(teapotMatrix, [0, 0, 0]);
-  rotate(teapotMatrix, identityMatrix, Math.PI / 2, [0, 1, 0]);
-  scale(teapotMatrix, [teapotScaleVal, teapotScaleVal, teapotScaleVal]);
-  sendMatricesToShader(
-    gl,
-    teapotShaderProgram,
-    teapotMatrix,
-    viewMatrix,
-    projMatrix
-  );
-  //------------------------------------------------------------------------------------------------
-  //
-  // MAIN RENDER LOOP
-  //
-  //------------------------------------------------------------------------------------------------
-  //main render loop
-  function loop() {
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-    angle = (performance.now() / 1000 / 6) * 2 * Math.PI;
-
-    //-------------------------------------------------------------------------
-    // skybox cube rendering
-    //-------------------------------------------------------------------------
-    bindSkyboxCubeBuffer(gl, skyboxVBO, cubeIBO, skyBoxShaderProgram);
-
-    //camera rotation
-    rotate(viewMatrix, identityMatrix, angle / 20, [0, 1, 0]);
-    sendViewMatrixToShader(gl, skyBoxShaderProgram, viewMatrix);
-    sendWorldMatrixToShader(gl, skyBoxShaderProgram, skyboxMatrix);
-
-    gl.drawElements(gl.TRIANGLES, cubeIndices.length, gl.UNSIGNED_SHORT, 0);
-
-    //-------------------------------------------------------------------------
-    // teapot rendering                         TODO
-    //-------------------------------------------------------------------------
-    bindTeaPotBuffer(
-      gl,
-      teapotVBO,
-      teapotVBOnormals,
-      teapotIBO,
-      teapotShaderProgram
-    );
-    // rotation controls
-    if (cubeRotationAxis == "X") {
-      rotate(
-        teapotMatrix,
-        identityMatrix,
-        rotationAngleX * 2 * Math.PI,
-        [1, 0, 0]
-      );
-      scale(teapotMatrix, [teapotScaleVal, teapotScaleVal, teapotScaleVal]);
-    }
-    if (cubeRotationAxis == "Y") {
-      rotate(
-        teapotMatrix,
-        identityMatrix,
-        rotationAngleY * 2 * Math.PI,
-        [0, 1, 0]
-      );
-      scale(teapotMatrix, [teapotScaleVal, teapotScaleVal, teapotScaleVal]);
-    }
-    sendWorldMatrixToShader(gl, teapotShaderProgram, teapotMatrix);
-    sendViewMatrixToShader(gl, teapotShaderProgram, viewMatrix);
-    gl.drawElements(gl.TRIANGLES, teapotIndices.length, gl.UNSIGNED_SHORT, 0);
-
-    //-------------------------------------------------------------------------
-    // transparent cube rendering
-    //-------------------------------------------------------------------------
-    bindTransCubeBuffer(gl, transCubeVBO, cubeIBO, transparentShaderProgram);
-    // rotation controls
-    if (cubeRotationAxis == "X") {
-      rotate(
-        cubeMatrix,
-        identityMatrix,
-        rotationAngleX * 2 * Math.PI,
-        [1, 0, 0]
-      );
-    }
-    if (cubeRotationAxis == "Y") {
-      rotate(
-        cubeMatrix,
-        identityMatrix,
-        rotationAngleY * 2 * Math.PI,
-        [0, 1, 0]
-      );
-    }
-    sendViewMatrixToShader(gl, transparentShaderProgram, viewMatrix);
-    sendWorldMatrixToShader(gl, transparentShaderProgram, cubeMatrix);
-    gl.drawElements(gl.TRIANGLES, cubeIndices.length, gl.UNSIGNED_SHORT, 0);
-
-    requestAnimationFrame(loop);
-  }
-  requestAnimationFrame(loop);
-};
-
 //------------------------------------------------------------------------------------------------
 //
-// GLOBAL VARIABLES
-//
-//------------------------------------------------------------------------------------------------
-var canvas; // canvas that is displayed on the webpage
-//vertecies and indecies
-var skyboxVerts = [
-  // X, Y, Z, w
-  // Top
-  -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0,
-  1.0,
-
-  // Left
-  -1.0, 1.0, 1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, -1.0, 1.0,
-  -1.0, 1.0,
-
-  // Right
-  1.0, 1.0, 1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0, -1.0,
-  1.0,
-
-  // Front
-  1.0, 1.0, 1.0, 1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0,
-  1.0,
-
-  // Back
-  1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0, -1.0, 1.0, -1.0, 1.0,
-  -1.0, 1.0,
-
-  // Bottom
-  -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0, -1.0,
-  -1.0, 1.0,
-];
-var cubeIndices = [
-  // Top
-  0, 1, 2, 0, 2, 3,
-
-  // Left
-  4, 5, 6, 4, 6, 7,
-
-  // Right
-  8, 9, 10, 8, 10, 11,
-
-  // Front
-  12, 13, 14, 12, 14, 15,
-
-  // Back
-  16, 17, 18, 16, 18, 19,
-
-  // Bottom
-  20, 21, 22, 20, 22, 23,
-];
-var cubeVertices = [
-  // X, Y, Z           R, G, B
-  // Top
-  -1.0, 1.0, -1.0, 0.5, 0.5, 0.5, -1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0,
-  0.5, 0.5, 0.5, 1.0, 1.0, -1.0, 0.5, 0.5, 0.5,
-
-  // Left
-  -1.0, 1.0, 1.0, 0.75, 0.25, 0.5, -1.0, -1.0, 1.0, 0.75, 0.25, 0.5, -1.0, -1.0,
-  -1.0, 0.75, 0.25, 0.5, -1.0, 1.0, -1.0, 0.75, 0.25, 0.5,
-
-  // Right
-  1.0, 1.0, 1.0, 0.25, 0.25, 0.75, 1.0, -1.0, 1.0, 0.25, 0.25, 0.75, 1.0, -1.0,
-  -1.0, 0.25, 0.25, 0.75, 1.0, 1.0, -1.0, 0.25, 0.25, 0.75,
-
-  // Front
-  1.0, 1.0, 1.0, 1.0, 0.0, 0.15, 1.0, -1.0, 1.0, 1.0, 0.0, 0.15, -1.0, -1.0,
-  1.0, 1.0, 0.0, 0.15, -1.0, 1.0, 1.0, 1.0, 0.0, 0.15,
-
-  // Back
-  1.0, 1.0, -1.0, 0.0, 1.0, 0.15, 1.0, -1.0, -1.0, 0.0, 1.0, 0.15, -1.0, -1.0,
-  -1.0, 0.0, 1.0, 0.15, -1.0, 1.0, -1.0, 0.0, 1.0, 0.15,
-
-  // Bottom
-  -1.0, -1.0, -1.0, 0.5, 0.5, 1.0, -1.0, -1.0, 1.0, 0.5, 0.5, 1.0, 1.0, -1.0,
-  1.0, 0.5, 0.5, 1.0, 1.0, -1.0, -1.0, 0.5, 0.5, 1.0,
-];
-var teapotVertices = loadObjVertices("teapot.obj");
-var teapotIndices = loadObjIndices("teapot.obj");
-var teapotNormals = loadObjNormals("teapot.obj");
-
-//rotation control vars
-var cubeRotationAxis = "N";
-var rotationAngleX = 0; // gets changed by button press
-var rotationAngleY = 0;
-var rotationSpeed = 0.015;
-
-//------------------------------------------------------------------------------------------------
-//
-// FUNCTIONS
+// HELP FUNCTIONS USED IN INIT PROGRAM
 //
 //------------------------------------------------------------------------------------------------
 
@@ -372,6 +42,11 @@ function setWebGLSettings(
   //set face orientation
   webGLContext.frontFace(frontFaceOrientation);
   webGLContext.cullFace(cuttedFaces);
+  webGLContext.blendFunc(
+    webGLContext.SRC_ALPHA,
+    webGLContext.ONE_MINUS_SRC_ALPHA
+  );
+  webGLContext.depthFunc(webGLContext.LEQUAL);
 
   //enable chosen capabilities
   setEnabled.forEach((element) => {
@@ -564,7 +239,7 @@ function createSkyBoxTexture(
     webGLContext.LINEAR_MIPMAP_LINEAR
   );
 
-  //webGLContext.bindTexture(webGLContext.TEXTURE_CUBE_MAP, null); //unbind text mem
+  webGLContext.bindTexture(webGLContext.TEXTURE_CUBE_MAP, null); //unbind text mem
   return boxTexture;
 }
 
@@ -649,7 +324,7 @@ function bindTransCubeBuffer(webGLContext, vbo, ibo, program) {
 /**
  * binds the skybox buffer and enables the attriblocs
  */
-function bindSkyboxCubeBuffer(webGLContext, vbo, ibo, program) {
+function bindSkyboxCubeBuffer(webGLContext, vbo, ibo, texture, program) {
   webGLContext.useProgram(program);
   webGLContext.bindBuffer(webGLContext.ARRAY_BUFFER, vbo);
   var vertPositionLoc = webGLContext.getAttribLocation(program, "vertPosition");
@@ -664,6 +339,7 @@ function bindSkyboxCubeBuffer(webGLContext, vbo, ibo, program) {
   webGLContext.enableVertexAttribArray(vertPositionLoc);
 
   webGLContext.bindBuffer(webGLContext.ELEMENT_ARRAY_BUFFER, ibo);
+  webGLContext.bindTexture(webGLContext.TEXTURE_CUBE_MAP, texture);
 }
 
 /**

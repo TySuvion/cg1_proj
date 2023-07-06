@@ -2,7 +2,7 @@
   <head>
     <title>WebGL - Simple triangle</title>
   </head>
-  <body onload="InitDemo();">
+  <body onload="main();">
     <canvas id="game-surface" width="800" height="600">
       your browser does not support html5
     </canvas>
@@ -10,28 +10,28 @@
     <i>demo is above this text</i>
     <img
       id="front_view"
-      src="textures/skybox/front.jpg"
+      src="textures/skybox/space/front.png"
       alt="front view"
       width="0"
       height="0"
     />
     <img
       id="back_view"
-      src="textures/skybox/back.jpg"
+      src="textures/skybox/space/back.png"
       alt="back view"
       width="0"
       height="0"
     />
     <img
       id="bottom_view"
-      src="textures/skybox/bottom.jpg"
+      src="textures/skybox/space/bottom.png"
       alt="bottom view"
       width="0"
       height="0"
     />
     <img
       id="top_view"
-      src="textures/skybox/top.jpg"
+      src="textures/skybox/space/top.png"
       alt="top view"
       width="0"
       height="0"
@@ -39,7 +39,7 @@
 
     <img
       id="left_view"
-      src="textures/skybox/left.jpg"
+      src="textures/skybox/space/left.png"
       alt="left view"
       width="0"
       height="0"
@@ -47,14 +47,15 @@
 
     <img
       id="right_view"
-      src="textures/skybox/right.jpg"
+      src="textures/skybox/space/right.png"
       alt="right view"
       width="0"
       height="0"
     />
-    <script src="konradsApp.js"></script>
-    <script src="MatrixFunc.js"></script>
-    <script src="objectLoader.js"></script>
-    <script src="app.js"></script>
+    <script src="src/matrix.js"></script>
+    <script src="src/objectLoader.js"></script>
+    <script src="src/functions.js"></script>
+    <script src="src/vars.js"></script>
+    <script src="src/app.js"></script>
   </body>
 </html>
