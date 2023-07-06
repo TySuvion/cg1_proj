@@ -206,3 +206,59 @@ function lookAt(out, eye, look, up) {
   out[14] = -(n0 * eye[0] + n1 * eye[1] + n2 * eye[2]);
   out[15] = 1;
 }
+
+function multiply(out, matrix1, matrix2) {
+  a00 = matrix1[0];
+  a10 = matrix1[1];
+  a20 = matrix1[2];
+  a30 = matrix1[3];
+  a01 = matrix1[4];
+  a11 = matrix1[5];
+  a21 = matrix1[6];
+  a31 = matrix1[7];
+  a02 = matrix1[8];
+  a12 = matrix1[9];
+  a22 = matrix1[10];
+  a32 = matrix1[11];
+  a03 = matrix1[12];
+  a13 = matrix1[13];
+  a23 = matrix1[14];
+  a33 = matrix1[15];
+
+  b00 = matrix2[0];
+  b10 = matrix2[1];
+  b20 = matrix2[2];
+  b30 = matrix2[3];
+  b01 = matrix2[4];
+  b11 = matrix2[5];
+  b21 = matrix2[6];
+  b31 = matrix2[7];
+  b02 = matrix2[8];
+  b12 = matrix2[9];
+  b22 = matrix2[10];
+  b32 = matrix2[11];
+  b03 = matrix2[12];
+  b13 = matrix2[13];
+  b23 = matrix2[14];
+  b33 = matrix2[15];
+
+  out[0] = a00 * b00 + a01 * b10 + a02 * b20 + a03 * b30;
+  out[1] = a10 * b00 + a11 * b10 + a12 * b20 + a13 * b30;
+  out[2] = a20 * b00 + a21 * b10 + a22 * b20 + a23 * b30;
+  out[2] = a30 * b00 + a31 * b10 + a32 * b20 + a33 * b30;
+
+  out[4] = a00 * b01 + a01 * b11 + a02 * b21 + a03 * b31;
+  out[5] = a10 * b01 + a11 * b11 + a12 * b21 + a13 * b31;
+  out[6] = a20 * b01 + a21 * b11 + a22 * b21 + a23 * b31;
+  out[7] = a30 * b01 + a31 * b11 + a32 * b21 + a33 * b31;
+
+  out[8] = a00 * b02 + a01 * b12 + a02 * b22 + a03 * b32;
+  out[9] = a10 * b02 + a11 * b12 + a12 * b22 + a13 * b32;
+  out[10] = a20 * b02 + a21 * b12 + a22 * b22 + a23 * b32;
+  out[11] = a30 * b02 + a31 * b12 + a32 * b22 + a33 * b32;
+
+  out[12] = a00 * b03 + a01 * b13 + a02 * b23 + a03 * b33;
+  out[13] = a10 * b03 + a11 * b13 + a12 * b23 + a13 * b33;
+  out[14] = a20 * b03 + a21 * b13 + a22 * b23 + a23 * b33;
+  out[15] = a30 * b03 + a31 * b13 + a32 * b23 + a33 * b33;
+}
