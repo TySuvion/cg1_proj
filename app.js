@@ -85,10 +85,13 @@ var InitDemo = async function () {
   //prepration for render loop
   var angle = 0; // allocate mem for angle (needed in loop)
 
+  // bind the skybox cube buffer
   bindSkyboxCubeBuffer(gl, skyboxVBO, cubeIBO, skyBoxShaderProgram);
 
-  //gl.bindTexture(gl.TEXTURE_CUBE_MAP, boxTexture);
+  //bind the skybox texture
+  gl.bindTexture(gl.TEXTURE_CUBE_MAP, boxTexture);
 
+  //TODO: Shit den Konrad gemacht hat ggf. noch weiter aufräumen.
   //gl.disable(gl.CULL_FACE);
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -112,16 +115,21 @@ var InitDemo = async function () {
 
     angle = (performance.now() / 1000 / 6) * 2 * Math.PI;
     angle /= 5;
-    //TODO: move camera around the cube.
 
-    //camera rotation controlls
-    rotate(viewMatrix, identityMatrix, angle / 20, [0, 1, 0]);
+    //-------------------------------------------------------------------------
+    // skybox cube rendering
+    //-------------------------------------------------------------------------
+
+    //camera rotation
+    rotate(viewMatrix, identityMatrix, angle / 10, [0, 1, 0]);
     sendViewMatrixToShader(gl, skyBoxShaderProgram, viewMatrix);
-    //rotate(viewMatrix, identityMatrix, angle / 20, [0, 1, 0]);
     sendViewMatrixToShader(gl, skyBoxShaderProgram, viewMatrix);
 
     gl.drawElements(gl.TRIANGLES, boxIndices.length, gl.UNSIGNED_SHORT, 0);
 
+    //-------------------------------------------------------------------------
+    // transparent cube rendering
+    //-------------------------------------------------------------------------
     bindTransCubeBuffer(gl, transCubeVBO, cubeIBO, transparentShaderProgram);
     sendMatricesToShader(
       gl,
@@ -130,6 +138,8 @@ var InitDemo = async function () {
       viewMatrix,
       projMatrix
     );
+
+    // rotation controls
     if (rightKeyPressed) {
       rotate(worldMatrix2, identityMatrix, angle, [0, 1, 0]);
     }
@@ -261,7 +271,6 @@ function setUpButtonControls() {
  * @param {*} event
  */
 function onKeyDown(event) {
-  console.log(event);
   switch (event.key) {
     case "ArrowUp":
       upKeyPressed = true;
@@ -285,7 +294,6 @@ function onKeyDown(event) {
  * @param {*} event
  */
 function onKeyUp(event) {
-  console.log(event);
   switch (event.key) {
     case "ArrowUp":
       upKeyPressed = false;
