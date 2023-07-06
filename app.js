@@ -14,7 +14,7 @@ var InitDemo = async function () {
 
   vertShaderText = await getShaderSourceCode("shaders/vertexShader.glsl");
   fragShaderTransparent = await getShaderSourceCode(
-    "shaders/fragmentShader.glsl"
+    "shaders/fragmentShaderTransparent.glsl"
   );
 
   var gl = getWebGLContext("game-surface"); // get the context webgl context from canvas
@@ -117,6 +117,16 @@ var InitDemo = async function () {
 
     gl.drawElements(gl.TRIANGLES, boxIndices.length, gl.UNSIGNED_SHORT, 0);
 
+    bindTransCubeBuffer(gl, transCubeVBO, cubeIBO, transparentShaderProgram);
+    sendMatricesToShader(
+      gl,
+      transparentShaderProgram,
+      worldMatrix2,
+      viewMatrix,
+      projMatrix
+    );
+    gl.drawElements(gl.TRIANGLES, boxIndices.length, gl.UNSIGNED_SHORT, 0);
+
     requestAnimationFrame(loop);
   }
   requestAnimationFrame(loop);
@@ -181,30 +191,30 @@ var boxIndices = [
   20, 21, 22, 20, 22, 23,
 ];
 var boxVertices = [
-  // X, Y, Z           R, G, B, A
+  // X, Y, Z           R, G, B
   // Top
-  -1.0, 1.0, -1.0, 0.5, 0.5, 0.5, 1.0, -1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0,
-  1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, -1.0, 0.5, 0.5, 0.5, 1.0,
+  -1.0, 1.0, -1.0, 0.5, 0.5, 0.5, -1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0,
+  0.5, 0.5, 0.5, 1.0, 1.0, -1.0, 0.5, 0.5, 0.5,
 
   // Left
-  -1.0, 1.0, 1.0, 0.75, 0.25, 0.5, 1.0, -1.0, -1.0, 1.0, 0.75, 0.25, 0.5, 1.0,
-  -1.0, -1.0, -1.0, 0.75, 0.25, 0.5, 1.0, -1.0, 1.0, -1.0, 0.75, 0.25, 0.5, 1.0,
+  -1.0, 1.0, 1.0, 0.75, 0.25, 0.5, -1.0, -1.0, 1.0, 0.75, 0.25, 0.5, -1.0, -1.0,
+  -1.0, 0.75, 0.25, 0.5, -1.0, 1.0, -1.0, 0.75, 0.25, 0.5,
 
   // Right
-  1.0, 1.0, 1.0, 0.25, 0.25, 0.75, 1.0, 1.0, -1.0, 1.0, 0.25, 0.25, 0.75, 1.0,
-  1.0, -1.0, -1.0, 0.25, 0.25, 0.75, 1.0, 1.0, 1.0, -1.0, 0.25, 0.25, 0.75, 1.0,
+  1.0, 1.0, 1.0, 0.25, 0.25, 0.75, 1.0, -1.0, 1.0, 0.25, 0.25, 0.75, 1.0, -1.0,
+  -1.0, 0.25, 0.25, 0.75, 1.0, 1.0, -1.0, 0.25, 0.25, 0.75,
 
   // Front
-  1.0, 1.0, 1.0, 1.0, 0.0, 0.15, 1.0, 1.0, -1.0, 1.0, 1.0, 0.0, 0.15, 1.0, -1.0,
-  -1.0, 1.0, 1.0, 0.0, 0.15, 1.0, -1.0, 1.0, 1.0, 1.0, 0.0, 0.15, 1.0,
+  1.0, 1.0, 1.0, 1.0, 0.0, 0.15, 1.0, -1.0, 1.0, 1.0, 0.0, 0.15, -1.0, -1.0,
+  1.0, 1.0, 0.0, 0.15, -1.0, 1.0, 1.0, 1.0, 0.0, 0.15,
 
   // Back
-  1.0, 1.0, -1.0, 0.0, 1.0, 0.15, 1.0, 1.0, -1.0, -1.0, 0.0, 1.0, 0.15, 1.0,
-  -1.0, -1.0, -1.0, 0.0, 1.0, 0.15, 1.0, -1.0, 1.0, -1.0, 0.0, 1.0, 0.15, 1.0,
+  1.0, 1.0, -1.0, 0.0, 1.0, 0.15, 1.0, -1.0, -1.0, 0.0, 1.0, 0.15, -1.0, -1.0,
+  -1.0, 0.0, 1.0, 0.15, -1.0, 1.0, -1.0, 0.0, 1.0, 0.15,
 
   // Bottom
-  -1.0, -1.0, -1.0, 0.5, 0.5, 1.0, 1.0, -1.0, -1.0, 1.0, 0.5, 0.5, 1.0, 1.0,
-  1.0, -1.0, 1.0, 0.5, 0.5, 1.0, 1.0, 1.0, -1.0, -1.0, 0.5, 0.5, 1.0, 1.0,
+  -1.0, -1.0, -1.0, 0.5, 0.5, 1.0, -1.0, -1.0, 1.0, 0.5, 0.5, 1.0, 1.0, -1.0,
+  1.0, 0.5, 0.5, 1.0, 1.0, -1.0, -1.0, 0.5, 0.5, 1.0,
 ];
 
 //------------------------------------------------
@@ -466,24 +476,26 @@ function bindTransCubeBuffer(webGLContext, vbo, ibo, program) {
   webGLContext.useProgram(program);
   webGLContext.bindBuffer(webGLContext.ARRAY_BUFFER, vbo);
   var vertPositionLoc = webGLContext.getAttribLocation(program, "vertPosition");
-  var vertColorLoc = webGLContext.getAttribLocation(program, "vertColor");
   webGLContext.vertexAttribPointer(
     vertPositionLoc, //Attribute Location
     3, // number of elements per attribute
     webGLContext.FLOAT, //type of elements
     webGLContext.FALSE, //if data is normalized
-    7 * Float32Array.BYTES_PER_ELEMENT, //Size of an individual vertex
-    0 //offset from the beginning of a single vertex to out attribute
+    6 * Float32Array.BYTES_PER_ELEMENT, //Size of an individual vertex
+    0 * Float32Array.BYTES_PER_ELEMENT //offset from the beginning of a single vertex to out attribute
   );
   webGLContext.enableVertexAttribArray(vertPositionLoc);
+
+  webGLContext.bindBuffer(webGLContext.ARRAY_BUFFER, vbo);
+  var vertColorLoc = webGLContext.getAttribLocation(program, "vertColor");
 
   webGLContext.vertexAttribPointer(
     vertColorLoc, //Attribute Location
     3, // number of elements per attribute
     webGLContext.FLOAT, //type of elements
     webGLContext.FALSE, //if data is normalized
-    7 * Float32Array.BYTES_PER_ELEMENT, //Size of an individual vertex
-    3 //offset from the beginning of a single vertex to out attribute
+    6 * Float32Array.BYTES_PER_ELEMENT, //Size of an individual vertex
+    3 * Float32Array.BYTES_PER_ELEMENT
   );
   webGLContext.enableVertexAttribArray(vertColorLoc);
 
@@ -533,6 +545,7 @@ function sendMatricesToShader(
   mView,
   mProj
 ) {
+  webGLContext.useProgram(shaderProgram);
   var matWorldUniformLocation = webGLContext.getUniformLocation(
     shaderProgram,
     "mWorld"
@@ -564,6 +577,7 @@ function sendMatricesToShader(
   );
 }
 function sendWorldMatrixToShader(webGLContext, shaderProgram, mWorld) {
+  webGLContext.useProgram(shaderProgram);
   var matWorldUniformLocation = webGLContext.getUniformLocation(
     shaderProgram,
     "mWorld"
@@ -576,6 +590,7 @@ function sendWorldMatrixToShader(webGLContext, shaderProgram, mWorld) {
 }
 
 function sendViewMatrixToShader(webGLContext, shaderProgram, mView) {
+  webGLContext.useProgram(shaderProgram);
   var matWorldUniformLocation = webGLContext.getUniformLocation(
     shaderProgram,
     "mView"
