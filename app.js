@@ -107,6 +107,7 @@ var InitDemo = async function () {
 
   //transcube transforms
   translate(worldMatrix2, [0, 0, 0]);
+  rotate(worldMatrix2, identityMatrix, Math.PI / 2, [0, 0, 1]);
   scale(worldMatrix2, [1, 1, 1]);
 
   //main render loop
@@ -138,20 +139,24 @@ var InitDemo = async function () {
       viewMatrix,
       projMatrix
     );
-
     // rotation controls
-    if (rightKeyPressed) {
-      rotate(worldMatrix2, identityMatrix, angle, [0, 1, 0]);
+    if (cubeRotationAxis == "X") {
+      rotate(
+        worldMatrix2,
+        identityMatrix,
+        rotationAngleX * 2 * Math.PI,
+        [1, 0, 0]
+      );
     }
-    if (leftKeyPressed) {
-      rotate(worldMatrix2, identityMatrix, angle, [0, -1, 0]);
+    if (cubeRotationAxis == "Y") {
+      rotate(
+        worldMatrix2,
+        identityMatrix,
+        rotationAngleY * 2 * Math.PI,
+        [0, 1, 0]
+      );
     }
-    if (upKeyPressed) {
-      rotate(worldMatrix2, identityMatrix, angle, [1, 0, 0]);
-    }
-    if (downKeyPressed) {
-      rotate(worldMatrix2, identityMatrix, angle, [-1, 0, 0]);
-    }
+
     sendWorldMatrixToShader(gl, transparentShaderProgram, worldMatrix2);
     gl.drawElements(gl.TRIANGLES, boxIndices.length, gl.UNSIGNED_SHORT, 0);
 
@@ -250,6 +255,12 @@ var downKeyPressed = false;
 var leftKeyPressed = false;
 var rightKeyPressed = false;
 
+var cubeRotationAxis = "N";
+
+var rotationAngleX = 0; // gets changed by button press
+var rotationAngleY = 0;
+var rotationSpeed = 0.02;
+
 //------------------------------------------------
 //
 // functions
@@ -273,16 +284,20 @@ function setUpButtonControls() {
 function onKeyDown(event) {
   switch (event.key) {
     case "ArrowUp":
-      upKeyPressed = true;
+      cubeRotationAxis = "X";
+      rotationAngleX += rotationSpeed;
       break;
     case "ArrowDown":
-      downKeyPressed = true;
+      cubeRotationAxis = "X";
+      rotationAngleX -= rotationSpeed;
       break;
     case "ArrowLeft":
-      leftKeyPressed = true;
+      cubeRotationAxis = "Y";
+      rotationAngleY -= rotationSpeed;
       break;
     case "ArrowRight":
-      rightKeyPressed = true;
+      cubeRotationAxis = "Y";
+      rotationAngleY += rotationSpeed;
       break;
     default:
       break;
@@ -294,22 +309,7 @@ function onKeyDown(event) {
  * @param {*} event
  */
 function onKeyUp(event) {
-  switch (event.key) {
-    case "ArrowUp":
-      upKeyPressed = false;
-      break;
-    case "ArrowDown":
-      downKeyPressed = false;
-      break;
-    case "ArrowLeft":
-      leftKeyPressed = false;
-      break;
-    case "ArrowRight":
-      rightKeyPressed = false;
-      break;
-    default:
-      break;
-  }
+  cubeRotationAxis = "N";
 }
 
 /**
