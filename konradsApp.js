@@ -130,6 +130,10 @@ void main() {
         const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
         gl.shaderSource(fragmentShader, fragmentShaderSource);
         gl.compileShader(fragmentShader);
+        if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
+            console.error("ERROR: compiling fragment shader", gl.getShaderInfoLog(fragmentShader));
+            return;
+        }
 
         //create shader program
         const shaderProgram = gl.createProgram();
@@ -350,16 +354,13 @@ void main() {
     var matWorldUniformLocationNormals = gl.getUniformLocation(normalsShaderProgram, "mWorld");
     var matViewUniformLocationNormals = gl.getUniformLocation(normalsShaderProgram, "mView");
     var matProjUniformLocationNormals = gl.getUniformLocation(normalsShaderProgram, "mProj");
-
+    const objectColor = [1.0, 1.0, 1.0];
+    var materialColorUniformLocation = gl.getUniformLocation(normalsShaderProgram, "materialColor");
 
     function uniformUtahNormals(){
-        gl.uniformMatrix4fv(matWorldUniformLocationNormals, gl.FALSE, worldMatrix2);
+        gl.uniformMatrix4fv(matWorldUniformLocationNormals, gl.FALSE, worldMatrix);
         gl.uniformMatrix4fv(matViewUniformLocationNormals, gl.FALSE, viewMatrix);
         gl.uniformMatrix4fv(matProjUniformLocationNormals, gl.FALSE, projMatrix);
-
-        const objectColor = [1.0, 0.0, 0.0];
-        var materialColorUniformLocation = gl.getUniformLocation(normalsShaderProgram, "materialColor");
-        gl.uniform3fv(materialColorUniformLocation, objectColor);
     }
 
     //create transform matrices
@@ -414,11 +415,12 @@ void main() {
        uniformUtahNormals();
         gl.drawElements(gl.TRIANGLES, utahIndices.length, gl.UNSIGNED_SHORT,0);
         //first cube
+        `
         bindBoxBuffers(program);
         gl.useProgram(program);
         uniformBox();
         gl.drawElements(gl.TRIANGLES, boxIndices.length, gl.UNSIGNED_SHORT, 0);
-
+`
         requestAnimationFrame(loop);
     }
     requestAnimationFrame(loop);
