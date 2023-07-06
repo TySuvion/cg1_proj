@@ -60,15 +60,15 @@ var InitDemo = async function () {
   //create skybox vbo
   var skyboxVBO = createVBO(gl, skyboxVerts);
   //create general cube ibo
-  var cubeIBO = createIBO(gl, boxIndices);
+  var cubeIBO = createIBO(gl, cubeIndices);
   //transparent Cube VBO
-  var transCubeVBO = createVBO(gl, boxVertices);
+  var transCubeVBO = createVBO(gl, cubeVertices);
   //teapotvbo
-  var teapotVBO = createVBO(gl, utahVertices);
+  var teapotVBO = createVBO(gl, teapotVertices);
   //teapot normals vbo
-  var teapotVBOnormals = createVBO(gl, utahNormals);
+  var teapotVBOnormals = createVBO(gl, teapotNormals);
   //teapot ibo
-  var teapotIBO = createIBO(gl, utahIndices);
+  var teapotIBO = createIBO(gl, teapotIndices);
 
   //-------------------------------------------------------------------------
   // TEXTURE
@@ -175,7 +175,7 @@ var InitDemo = async function () {
     sendViewMatrixToShader(gl, skyBoxShaderProgram, viewMatrix);
     sendWorldMatrixToShader(gl, skyBoxShaderProgram, skyboxMatrix);
 
-    gl.drawElements(gl.TRIANGLES, boxIndices.length, gl.UNSIGNED_SHORT, 0);
+    gl.drawElements(gl.TRIANGLES, cubeIndices.length, gl.UNSIGNED_SHORT, 0);
 
     //-------------------------------------------------------------------------
     // teapot rendering                         TODO
@@ -208,7 +208,7 @@ var InitDemo = async function () {
     }
     sendWorldMatrixToShader(gl, teapotShaderProgram, teapotMatrix);
     sendViewMatrixToShader(gl, teapotShaderProgram, viewMatrix);
-    gl.drawElements(gl.TRIANGLES, utahIndices.length, gl.UNSIGNED_SHORT, 0);
+    gl.drawElements(gl.TRIANGLES, teapotIndices.length, gl.UNSIGNED_SHORT, 0);
 
     //-------------------------------------------------------------------------
     // transparent cube rendering
@@ -233,7 +233,7 @@ var InitDemo = async function () {
     }
     sendViewMatrixToShader(gl, transparentShaderProgram, viewMatrix);
     sendWorldMatrixToShader(gl, transparentShaderProgram, cubeMatrix);
-    gl.drawElements(gl.TRIANGLES, boxIndices.length, gl.UNSIGNED_SHORT, 0);
+    gl.drawElements(gl.TRIANGLES, cubeIndices.length, gl.UNSIGNED_SHORT, 0);
 
     requestAnimationFrame(loop);
   }
@@ -246,12 +246,6 @@ var InitDemo = async function () {
 //
 //------------------------------------------------------------------------------------------------
 var canvas; // canvas that is displayed on the webpage
-//vertex shader
-var skyBoxVertShaderText = "";
-var vertShaderText = "";
-//fragment shader
-var skyBoxFragShaderText = "";
-var fragShaderTransparent = "";
 //vertecies and indecies
 var skyboxVerts = [
   // X, Y, Z, w
@@ -279,7 +273,7 @@ var skyboxVerts = [
   -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0, -1.0,
   -1.0, 1.0,
 ];
-var boxIndices = [
+var cubeIndices = [
   // Top
   0, 1, 2, 0, 2, 3,
 
@@ -298,7 +292,7 @@ var boxIndices = [
   // Bottom
   20, 21, 22, 20, 22, 23,
 ];
-var boxVertices = [
+var cubeVertices = [
   // X, Y, Z           R, G, B
   // Top
   -1.0, 1.0, -1.0, 0.5, 0.5, 0.5, -1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0,
@@ -324,16 +318,15 @@ var boxVertices = [
   -1.0, -1.0, -1.0, 0.5, 0.5, 1.0, -1.0, -1.0, 1.0, 0.5, 0.5, 1.0, 1.0, -1.0,
   1.0, 0.5, 0.5, 1.0, 1.0, -1.0, -1.0, 0.5, 0.5, 1.0,
 ];
-
-var utahVertices = loadObjVertices("teapot.obj");
-var utahIndices = loadObjIndices("teapot.obj");
-var utahNormals = loadObjNormals("teapot.obj");
+var teapotVertices = loadObjVertices("teapot.obj");
+var teapotIndices = loadObjIndices("teapot.obj");
+var teapotNormals = loadObjNormals("teapot.obj");
 
 //rotation control vars
 var cubeRotationAxis = "N";
 var rotationAngleX = 0; // gets changed by button press
 var rotationAngleY = 0;
-var rotationSpeed = 0.02;
+var rotationSpeed = 0.015;
 
 //------------------------------------------------------------------------------------------------
 //
