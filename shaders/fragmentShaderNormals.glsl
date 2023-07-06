@@ -6,7 +6,7 @@ varying vec3 fragColor;
 
 void main(){
 
-    vec3 ambientLightIntensity = vec3(0.1,0.1,0.2);
+    vec3 ambientLightIntensity = vec3(0.4,0.4,0.5);
     vec3 sunlightIntensity = vec3(0.9,0.8,0.6);
     vec3 sunlightDirection = normalize(vec3(1.0,4.0,0.0));
 

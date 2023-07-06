@@ -5,23 +5,41 @@
 //------------------------------------------------
 var InitDemo = async function () {
   setUpButtonControls();
+
+  var gl = getWebGLContext("game-surface"); // get the context webgl context from canvas
+
+  //initialize webgl
+  setWebGLSettings(gl, [0.8, 0.8, 0.8, 1.0], gl.CCW, gl.FRONT, [gl.DEPTH_TEST]);
+
+  //-------------------------------------------------------------------------
+  // SHADER
+  //-------------------------------------------------------------------------
+
   //getting shader src
+  vertShaderText = await getShaderSourceCode("shaders/vertexShader.glsl");
+
   skyBoxFragShaderText = await getShaderSourceCode(
     "shaders/skyBoxFragShader.glsl"
   );
   skyBoxVertShaderText = await getShaderSourceCode(
     "shaders/skyBoxVertShader.glsl"
   );
-
-  vertShaderText = await getShaderSourceCode("shaders/vertexShader.glsl");
   fragShaderTransparent = await getShaderSourceCode(
     "shaders/fragmentShaderTransparent.glsl"
   );
+  vertShaderTeapotText = await getShaderSourceCode(
+    "shaders/vertexShaderNormals.glsl"
+  );
+  fragShaderTeapotText = await getShaderSourceCode(
+    "shaders/fragmentShaderNormals.glsl"
+  );
 
-  var gl = getWebGLContext("game-surface"); // get the context webgl context from canvas
-
-  //initialize webgl
-  setWebGLSettings(gl, [0.8, 0.8, 0.8, 1.0], gl.CCW, gl.FRONT, [gl.DEPTH_TEST]);
+  //creating and compiling the shader programs
+  var teapotShaderProgram = await createAndCompileShaderProg(
+    gl,
+    vertShaderTeapotText,
+    fragShaderTeapotText
+  );
 
   var transparentShaderProgram = await createAndCompileShaderProg(
     gl,
@@ -36,14 +54,25 @@ var InitDemo = async function () {
   );
   gl.useProgram(skyBoxShaderProgram);
 
+  //-------------------------------------------------------------------------
+  // BUFFER
+  //-------------------------------------------------------------------------
   //create skybox vbo
   var skyboxVBO = createVBO(gl, skyboxVerts);
   //create general cube ibo
   var cubeIBO = createIBO(gl, boxIndices);
-
+  //transparent Cube VBO
   var transCubeVBO = createVBO(gl, boxVertices);
+  //teapotvbo
+  var teapotVBO = createVBO(gl, utahVertices);
+  //teapot normals vbo
+  var teapotVBOnormals = createVBO(gl, utahNormals);
+  //teapot ibo
+  var teapotIBO = createIBO(gl, utahIndices);
 
-  //Texture
+  //-------------------------------------------------------------------------
+  // TEXTURE
+  //-------------------------------------------------------------------------
   var boxTexture = createSkyBoxTexture(
     gl,
     "top_view",
@@ -54,33 +83,23 @@ var InitDemo = async function () {
     "right_view"
   );
 
-  //Matrix
+  //-------------------------------------------------------------------------
+  // MATRICES
+  //-------------------------------------------------------------------------
   //create transform matrices
   var identityMatrix = new Float32Array(16);
-  var worldMatrix = new Float32Array(16);
+  var skyboxMatrix = new Float32Array(16);
+  var cubeMatrix = new Float32Array(16);
+  var teapotMatrix = new Float32Array(16);
   var viewMatrix = new Float32Array(16);
   var projMatrix = new Float32Array(16);
 
-  transformMatrices(identityMatrix, worldMatrix, viewMatrix, projMatrix);
-  sendMatricesToShader(
-    gl,
-    skyBoxShaderProgram,
-    worldMatrix,
+  transformMatrices(
+    identityMatrix,
+    [skyboxMatrix, cubeMatrix, teapotMatrix],
     viewMatrix,
     projMatrix
   );
-
-  // for the transparent cube a second world matrix
-  var worldMatrix2 = new Float32Array(16);
-  identity(worldMatrix2);
-
-  //#endregion
-
-  //------------------------------------------------
-  //
-  // main render loop
-  //
-  //------------------------------------------------
 
   //prepration for render loop
   var angle = 0; // allocate mem for angle (needed in loop)
@@ -100,49 +119,88 @@ var InitDemo = async function () {
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);
 
+  //-------------------------------------------------------------------------
+  // skybox transforms
+  //-------------------------------------------------------------------------
   //scale the skybox
   let scaleVal = 30;
-  scale(worldMatrix, [scaleVal, scaleVal, scaleVal]);
-  sendWorldMatrixToShader(gl, skyBoxShaderProgram, worldMatrix);
+  scale(skyboxMatrix, [scaleVal, scaleVal, scaleVal]);
+  sendMatricesToShader(
+    gl,
+    skyBoxShaderProgram,
+    skyboxMatrix,
+    viewMatrix,
+    projMatrix
+  );
 
-  //transcube transforms
-  translate(worldMatrix2, [0, 0, 0]);
-  rotate(worldMatrix2, identityMatrix, Math.PI / 2, [0, 0, 1]);
-  scale(worldMatrix2, [1, 1, 1]);
+  //-------------------------------------------------------------------------
+  // transparent cube transforms
+  //-------------------------------------------------------------------------
+  translate(cubeMatrix, [0, 0, 0]);
+  scale(cubeMatrix, [1, 1, 1]);
+  sendMatricesToShader(
+    gl,
+    transparentShaderProgram,
+    cubeMatrix,
+    viewMatrix,
+    projMatrix
+  );
 
+  //-------------------------------------------------------------------------
+  // teapot transforms                          TODO
+  //-------------------------------------------------------------------------
+  let teapotScaleVal = 0.3;
+  translate(teapotMatrix, [0, 0, 0]);
+  scale(teapotMatrix, [teapotScaleVal, teapotScaleVal, teapotScaleVal]);
+  sendMatricesToShader(
+    gl,
+    teapotShaderProgram,
+    teapotMatrix,
+    viewMatrix,
+    projMatrix
+  );
+  //------------------------------------------------------------------------------------------------
+  //
+  // MAIN RENDER LOOP
+  //
+  //------------------------------------------------------------------------------------------------
   //main render loop
   function loop() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     angle = (performance.now() / 1000 / 6) * 2 * Math.PI;
-    angle /= 5;
 
     //-------------------------------------------------------------------------
     // skybox cube rendering
     //-------------------------------------------------------------------------
 
     //camera rotation
-    rotate(viewMatrix, identityMatrix, angle / 10, [0, 1, 0]);
+    rotate(viewMatrix, identityMatrix, angle / 20, [0, 1, 0]);
     sendViewMatrixToShader(gl, skyBoxShaderProgram, viewMatrix);
-    sendViewMatrixToShader(gl, skyBoxShaderProgram, viewMatrix);
+    sendWorldMatrixToShader(gl, skyBoxShaderProgram, skyboxMatrix);
 
     gl.drawElements(gl.TRIANGLES, boxIndices.length, gl.UNSIGNED_SHORT, 0);
 
     //-------------------------------------------------------------------------
+    // teapot rendering                         TODO
+    //-------------------------------------------------------------------------
+    bindTeaPotBuffer(
+      gl,
+      teapotVBO,
+      teapotVBOnormals,
+      teapotIBO,
+      teapotShaderProgram
+    );
+    gl.drawElements(gl.TRIANGLES, utahIndices.length, gl.UNSIGNED_SHORT, 0);
+    sendViewMatrixToShader(gl, teapotShaderProgram, viewMatrix);
+    //-------------------------------------------------------------------------
     // transparent cube rendering
     //-------------------------------------------------------------------------
     bindTransCubeBuffer(gl, transCubeVBO, cubeIBO, transparentShaderProgram);
-    sendMatricesToShader(
-      gl,
-      transparentShaderProgram,
-      worldMatrix2,
-      viewMatrix,
-      projMatrix
-    );
     // rotation controls
     if (cubeRotationAxis == "X") {
       rotate(
-        worldMatrix2,
+        cubeMatrix,
         identityMatrix,
         rotationAngleX * 2 * Math.PI,
         [1, 0, 0]
@@ -150,14 +208,14 @@ var InitDemo = async function () {
     }
     if (cubeRotationAxis == "Y") {
       rotate(
-        worldMatrix2,
+        cubeMatrix,
         identityMatrix,
         rotationAngleY * 2 * Math.PI,
         [0, 1, 0]
       );
     }
-
-    sendWorldMatrixToShader(gl, transparentShaderProgram, worldMatrix2);
+    sendViewMatrixToShader(gl, transparentShaderProgram, viewMatrix);
+    sendWorldMatrixToShader(gl, transparentShaderProgram, cubeMatrix);
     gl.drawElements(gl.TRIANGLES, boxIndices.length, gl.UNSIGNED_SHORT, 0);
 
     requestAnimationFrame(loop);
@@ -165,11 +223,11 @@ var InitDemo = async function () {
   requestAnimationFrame(loop);
 };
 
-//------------------------------------------------
+//------------------------------------------------------------------------------------------------
 //
-// global variables
+// GLOBAL VARIABLES
 //
-//------------------------------------------------
+//------------------------------------------------------------------------------------------------
 var canvas; // canvas that is displayed on the webpage
 //vertex shader
 var skyBoxVertShaderText = "";
@@ -249,24 +307,67 @@ var boxVertices = [
   -1.0, -1.0, -1.0, 0.5, 0.5, 1.0, -1.0, -1.0, 1.0, 0.5, 0.5, 1.0, 1.0, -1.0,
   1.0, 0.5, 0.5, 1.0, 1.0, -1.0, -1.0, 0.5, 0.5, 1.0,
 ];
-//bool
-var upKeyPressed = false;
-var downKeyPressed = false;
-var leftKeyPressed = false;
-var rightKeyPressed = false;
 
+var utahVertices = loadObjVertices("teapot.obj");
+var utahIndices = loadObjIndices("teapot.obj");
+var utahNormals = loadObjNormals("teapot.obj");
+
+//rotation control vars
 var cubeRotationAxis = "N";
-
 var rotationAngleX = 0; // gets changed by button press
 var rotationAngleY = 0;
 var rotationSpeed = 0.02;
 
-//------------------------------------------------
+//------------------------------------------------------------------------------------------------
 //
-// functions
+// FUNCTIONS
 //
-//------------------------------------------------
+//------------------------------------------------------------------------------------------------
 
+//-------------------------------------------------------------------------
+// SET UP METHODS
+//-------------------------------------------------------------------------
+/**
+ * Returns a WebGL Context from am HTML Canvas Element
+ */
+function getWebGLContext(canvasID) {
+  canvas = document.getElementById(canvasID);
+  var webGLContext = canvas.getContext("webgl");
+  return webGLContext;
+}
+
+/**
+ * Sets a few base settings for the webgl program.
+ * the given values for set enabled will be set as enabled
+ * for the rendering context.
+ */
+function setWebGLSettings(
+  webGLContext,
+  backgroundColor,
+  frontFaceOrientation,
+  cuttedFaces,
+  setEnabled
+) {
+  //set background
+  webGLContext.clearColor(
+    backgroundColor[0],
+    backgroundColor[1],
+    backgroundColor[2],
+    backgroundColor[3]
+  );
+  webGLContext.clear(
+    webGLContext.COLOR_BUFFER_BIT | webGLContext.DEPTH_BUFFER_BIT
+  );
+
+  //set face orientation
+  webGLContext.frontFace(frontFaceOrientation);
+  webGLContext.cullFace(cuttedFaces);
+
+  //enable chosen capabilities
+  setEnabled.forEach((element) => {
+    webGLContext.enable(element);
+  });
+}
 /**
  * sets up eventlistener for keydown and keyup events.
  */
@@ -277,9 +378,11 @@ function setUpButtonControls() {
   body.addEventListener("keyup", onKeyUp, false);
 }
 
+//-------------------------------------------------------------------------
+// EVENT CALL BACK METHODS
+//-------------------------------------------------------------------------
 /**
  * callback function for the keydown event
- * @param {*} event
  */
 function onKeyDown(event) {
   switch (event.key) {
@@ -306,16 +409,17 @@ function onKeyDown(event) {
 
 /**
  * callback function for the key up event
- * @param {*} event
  */
 function onKeyUp(event) {
   cubeRotationAxis = "N";
 }
 
+//-------------------------------------------------------------------------
+// SHADER METHODS
+//-------------------------------------------------------------------------
+
 /**
  * returns the source code as string from the file of the given url
- * @param {string} url
- * @returns {string} shadercode
  */
 async function getShaderSourceCode(url) {
   let response = await fetch(url);
@@ -325,9 +429,6 @@ async function getShaderSourceCode(url) {
 
 /**
  * creates and compiles a shader program with the given vertex and fragment shaders
- * @param {WebGLRenderingContext} webGLContext
- * @param {string} vertShaderCode
- * @param {string} fragShaderCode
  * @returns shaderProgram
  */
 async function createAndCompileShaderProg(
@@ -390,66 +491,12 @@ async function createAndCompileShaderProg(
   return program;
 }
 
-/**
- * Returns a WebGL Context from am HTML Canvas Element
- * @param {HTMLCanvasElement} canvasID
- * @returns {WebGLRenderingContext} weGLcontext
- */
-function getWebGLContext(canvasID) {
-  canvas = document.getElementById(canvasID);
-  var webGLContext = canvas.getContext("webgl");
-  return webGLContext;
-}
-
-/**
- * Sets a few base settings for the webgl program.
- * the given values for set enabled will be set as enabled
- * for the rendering context.
- * @param {WebGLRenderingContext} webGLContext
- * @param {vec4} backgroundColor
- * @param {Number} frontFaceOrientation
- * @param {Number} cuttedFaces
- * @param {*} setEnabled
- */
-function setWebGLSettings(
-  webGLContext,
-  backgroundColor,
-  frontFaceOrientation,
-  cuttedFaces,
-  setEnabled
-) {
-  //set background
-  webGLContext.clearColor(
-    backgroundColor[0],
-    backgroundColor[1],
-    backgroundColor[2],
-    backgroundColor[3]
-  );
-  webGLContext.clear(
-    webGLContext.COLOR_BUFFER_BIT | webGLContext.DEPTH_BUFFER_BIT
-  );
-
-  //set face orientation
-  webGLContext.frontFace(frontFaceOrientation);
-  webGLContext.cullFace(cuttedFaces);
-
-  //enable chosen capabilities
-  setEnabled.forEach((element) => {
-    webGLContext.enable(element);
-  });
-}
-
+//-------------------------------------------------------------------------
+// TEXTURE METHODS
+//-------------------------------------------------------------------------
 /**
  * Creates a CubeMap Texture with the linked images
  * from a html document
- * @param {WebGLRenderingContext} webGLContext
- * @param {string} topimageid
- * @param {string} bottomimageid
- * @param {string} frontimageid
- * @param {string} backimageid
- * @param {string} leftimageid
- * @param {string} rightimageid
- * @returns boxTexture
  */
 function createSkyBoxTexture(
   webGLContext,
@@ -511,14 +558,14 @@ function createSkyBoxTexture(
   return boxTexture;
 }
 
+//-------------------------------------------------------------------------
+// CREATE BUFFER METHODS
+//-------------------------------------------------------------------------
+
 /**
  * Create fill a Buffer for a SkyBox.
  * Note that the Buffer is unbinded in this function and
  * needs to be bound again before drawing.
- * @param {WebGLRenderingContext} webGLContext
- * @param {Shader Program} shaderProgram
- * @param {Float32Array} vertices
- * @returns {ArrayBuffer, AttribPointer} vbo, attribLoc
  */
 function createVBO(webGLContext, vertices) {
   //vbo skybox
@@ -537,8 +584,6 @@ function createVBO(webGLContext, vertices) {
 
 /**
  * creates and fills a element array buffer (ibo) for a cube
- * @param {WebGLRenderingContext} webGLContext
- * @param {Float32Array} cubeIndices
  * @returns index buffer object
  */
 function createIBO(webGLContext, cubeIndices) {
@@ -555,11 +600,11 @@ function createIBO(webGLContext, cubeIndices) {
   webGLContext.bindBuffer(webGLContext.ELEMENT_ARRAY_BUFFER, null); //unbind ibo
   return ibo;
 }
+//-------------------------------------------------------------------------
+// BIND BUFFER METHODS
+//-------------------------------------------------------------------------
 /**
  * binds the transcube buffer and enables the attriblocs
- * @param {*} webGLContext
- * @param {*} buffer
- * @param {*} program
  */
 function bindTransCubeBuffer(webGLContext, vbo, ibo, program) {
   webGLContext.useProgram(program);
@@ -593,9 +638,6 @@ function bindTransCubeBuffer(webGLContext, vbo, ibo, program) {
 
 /**
  * binds the skybox buffer and enables the attriblocs
- * @param {*} webGLContext
- * @param {*} buffer
- * @param {*} program
  */
 function bindSkyboxCubeBuffer(webGLContext, vbo, ibo, program) {
   webGLContext.useProgram(program);
@@ -607,16 +649,66 @@ function bindSkyboxCubeBuffer(webGLContext, vbo, ibo, program) {
     webGLContext.FLOAT, //type of elements
     webGLContext.FALSE, //if data is normalized
     4 * Float32Array.BYTES_PER_ELEMENT, //Size of an individual vertex
-    0 //offset from the beginning of a single vertex to out attribute
+    0 * Float32Array.BYTES_PER_ELEMENT //offset from the beginning of a single vertex to out attribute
   );
   webGLContext.enableVertexAttribArray(vertPositionLoc);
 
   webGLContext.bindBuffer(webGLContext.ELEMENT_ARRAY_BUFFER, ibo);
 }
 
+/**
+ * bind all necessary buffers and set all pointers for the teapot
+ */
+function bindTeaPotBuffer(webGLContext, vbo, vboNormals, ibo, program) {
+  webGLContext.useProgram(program);
+  //first bind the vbo an set the position pointer
+  webGLContext.bindBuffer(webGLContext.ARRAY_BUFFER, vbo);
+  //and bind the ibo
+  webGLContext.bindBuffer(webGLContext.ELEMENT_ARRAY_BUFFER, ibo);
+  //set attribPointer for verPosition
+  let positionAttribLocation = webGLContext.getAttribLocation(
+    program,
+    "vertPosition"
+  );
+  webGLContext.vertexAttribPointer(
+    positionAttribLocation,
+    3,
+    webGLContext.FLOAT,
+    webGLContext.FALSE,
+    0 * Float32Array.BYTES_PER_ELEMENT,
+    0 * Float32Array.BYTES_PER_ELEMENT
+  );
+  webGLContext.enableVertexAttribArray(positionAttribLocation);
+  //now do the normal vbo
+  webGLContext.bindBuffer(webGLContext.ARRAY_BUFFER, vboNormals);
+  //set the normal attrib Pointer
+  let normalAttribLocation = webGLContext.getAttribLocation(
+    program,
+    "vertNormal"
+  );
+  webGLContext.vertexAttribPointer(
+    normalAttribLocation,
+    3,
+    webGLContext.FLOAT,
+    webGLContext.FALSE,
+    0 * Float32Array.BYTES_PER_ELEMENT,
+    0 * Float32Array.BYTES_PER_ELEMENT
+  );
+  webGLContext.enableVertexAttribArray(normalAttribLocation);
+}
+
+//-------------------------------------------------------------------------
+// MATRCIES FUNCTIONS
+//-------------------------------------------------------------------------
+
+/**
+ * does the initial matrix transforms to but everything in window space.
+ */
 function transformMatrices(mIdentity, mWorld, mView, mProjection) {
   identity(mIdentity);
-  identity(mWorld);
+  mWorld.forEach((matrix) => {
+    identity(matrix);
+  });
   lookAt(mView, [0, 0, -6], [0, 0, 0], [0, 1, 0]);
   perspective(
     mProjection,
@@ -627,6 +719,9 @@ function transformMatrices(mIdentity, mWorld, mView, mProjection) {
   );
 }
 
+/**
+ * sends all 3 matrices (world, view, projection) to the shader
+ */
 function sendMatricesToShader(
   webGLContext,
   shaderProgram,
@@ -665,6 +760,10 @@ function sendMatricesToShader(
     mProj
   );
 }
+
+/**
+ * sends the world matrix to the shader program
+ */
 function sendWorldMatrixToShader(webGLContext, shaderProgram, mWorld) {
   webGLContext.useProgram(shaderProgram);
   var matWorldUniformLocation = webGLContext.getUniformLocation(
@@ -678,6 +777,9 @@ function sendWorldMatrixToShader(webGLContext, shaderProgram, mWorld) {
   );
 }
 
+/**
+ * Sends the view Matrix to the Shader Program
+ */
 function sendViewMatrixToShader(webGLContext, shaderProgram, mView) {
   webGLContext.useProgram(shaderProgram);
   var matWorldUniformLocation = webGLContext.getUniformLocation(
