@@ -708,7 +708,7 @@ function bindTeaPotBuffer(webGLContext, vbo, vboNormals, ibo, program) {
 }
 
 //-------------------------------------------------------------------------
-// MATRCIES FUNCTIONS
+// MATRCIES METHODS
 //-------------------------------------------------------------------------
 
 /**
@@ -719,7 +719,7 @@ function transformMatrices(mIdentity, mWorld, mView, mProjection) {
   mWorld.forEach((matrix) => {
     identity(matrix);
   });
-  lookAt(mView, [0, 0, -6], [0, 0, 0], [0, 1, 0]);
+  lookAt(mView, [0, 0, -7], [0, 0, 0], [0, 1, 0]);
   perspective(
     mProjection,
     Math.PI / 4,
