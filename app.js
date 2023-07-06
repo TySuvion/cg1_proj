@@ -1,19 +1,335 @@
+//------------------------------------------------
 //
-// global vars
+// main init webGL porgram
 //
+//------------------------------------------------
+var InitDemo = async function () {
+  setUpButtonControls();
+  //getting shader src
+  skyBoxFragShaderText = await getShaderSourceCode(
+    "shaders/skyBoxFragShader.glsl"
+  );
+  skyBoxVertShaderText = await getShaderSourceCode(
+    "shaders/skyBoxVertShader.glsl"
+  );
+
+  vertShaderText = await getShaderSourceCode("shaders/vertexShader.glsl");
+  fragShaderTransparent = await getShaderSourceCode(
+    "shaders/fragmentShaderTransparent.glsl"
+  );
+
+  var gl = getWebGLContext("game-surface"); // get the context webgl context from canvas
+
+  //initialize webgl
+  setWebGLSettings(gl, [0.8, 0.8, 0.8, 1.0], gl.CCW, gl.FRONT, [gl.DEPTH_TEST]);
+
+  var transparentShaderProgram = await createAndCompileShaderProg(
+    gl,
+    vertShaderText,
+    fragShaderTransparent
+  );
+
+  var skyBoxShaderProgram = await createAndCompileShaderProg(
+    gl,
+    skyBoxVertShaderText,
+    skyBoxFragShaderText
+  );
+  gl.useProgram(skyBoxShaderProgram);
+
+  //create skybox vbo
+  var skyboxVBO = createVBO(gl, skyboxVerts);
+  //create general cube ibo
+  var cubeIBO = createIBO(gl, boxIndices);
+
+  var transCubeVBO = createVBO(gl, boxVertices);
+
+  //Texture
+  var boxTexture = createSkyBoxTexture(
+    gl,
+    "top_view",
+    "bottom_view",
+    "front_view",
+    "back_view",
+    "left_view",
+    "right_view"
+  );
+
+  //Matrix
+  //create transform matrices
+  var identityMatrix = new Float32Array(16);
+  var worldMatrix = new Float32Array(16);
+  var viewMatrix = new Float32Array(16);
+  var projMatrix = new Float32Array(16);
+
+  transformMatrices(identityMatrix, worldMatrix, viewMatrix, projMatrix);
+  sendMatricesToShader(
+    gl,
+    skyBoxShaderProgram,
+    worldMatrix,
+    viewMatrix,
+    projMatrix
+  );
+
+  // for the transparent cube a second world matrix
+  var worldMatrix2 = new Float32Array(16);
+  identity(worldMatrix2);
+
+  //#endregion
+
+  //------------------------------------------------
+  //
+  // main render loop
+  //
+  //------------------------------------------------
+
+  //prepration for render loop
+  var angle = 0; // allocate mem for angle (needed in loop)
+
+  // bind the skybox cube buffer
+  bindSkyboxCubeBuffer(gl, skyboxVBO, cubeIBO, skyBoxShaderProgram);
+
+  //bind the skybox texture
+  gl.bindTexture(gl.TEXTURE_CUBE_MAP, boxTexture);
+
+  //TODO: Shit den Konrad gemacht hat ggf. noch weiter aufräumen.
+  //gl.disable(gl.CULL_FACE);
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+  // Enable depth testing
+  gl.enable(gl.DEPTH_TEST);
+  gl.depthFunc(gl.LEQUAL);
+
+  //scale the skybox
+  let scaleVal = 30;
+  scale(worldMatrix, [scaleVal, scaleVal, scaleVal]);
+  sendWorldMatrixToShader(gl, skyBoxShaderProgram, worldMatrix);
+
+  //transcube transforms
+  translate(worldMatrix2, [0, 0, 0]);
+  scale(worldMatrix2, [1, 1, 1]);
+
+  //main render loop
+  function loop() {
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    angle = (performance.now() / 1000 / 6) * 2 * Math.PI;
+    angle /= 5;
+
+    //-------------------------------------------------------------------------
+    // skybox cube rendering
+    //-------------------------------------------------------------------------
+
+    //camera rotation
+    rotate(viewMatrix, identityMatrix, angle / 10, [0, 1, 0]);
+    sendViewMatrixToShader(gl, skyBoxShaderProgram, viewMatrix);
+    sendViewMatrixToShader(gl, skyBoxShaderProgram, viewMatrix);
+
+    gl.drawElements(gl.TRIANGLES, boxIndices.length, gl.UNSIGNED_SHORT, 0);
+
+    //-------------------------------------------------------------------------
+    // transparent cube rendering
+    //-------------------------------------------------------------------------
+    bindTransCubeBuffer(gl, transCubeVBO, cubeIBO, transparentShaderProgram);
+    sendMatricesToShader(
+      gl,
+      transparentShaderProgram,
+      worldMatrix2,
+      viewMatrix,
+      projMatrix
+    );
+
+    // rotation controls
+    if (rightKeyPressed) {
+      rotate(worldMatrix2, identityMatrix, angle, [0, 1, 0]);
+    }
+    if (leftKeyPressed) {
+      rotate(worldMatrix2, identityMatrix, angle, [0, -1, 0]);
+    }
+    if (upKeyPressed) {
+      rotate(worldMatrix2, identityMatrix, angle, [1, 0, 0]);
+    }
+    if (downKeyPressed) {
+      rotate(worldMatrix2, identityMatrix, angle, [-1, 0, 0]);
+    }
+    sendWorldMatrixToShader(gl, transparentShaderProgram, worldMatrix2);
+    gl.drawElements(gl.TRIANGLES, boxIndices.length, gl.UNSIGNED_SHORT, 0);
+
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+};
+
+//------------------------------------------------
+//
+// global variables
+//
+//------------------------------------------------
 var canvas; // canvas that is displayed on the webpage
 //vertex shader
 var skyBoxVertShaderText = "";
-
+var vertShaderText = "";
 //fragment shader
 var skyBoxFragShaderText = "";
+var fragShaderTransparent = "";
+//vertecies and indecies
+var skyboxVerts = [
+  // X, Y, Z, w
+  // Top
+  -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0,
+  1.0,
+
+  // Left
+  -1.0, 1.0, 1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, -1.0, 1.0,
+  -1.0, 1.0,
+
+  // Right
+  1.0, 1.0, 1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0, -1.0,
+  1.0,
+
+  // Front
+  1.0, 1.0, 1.0, 1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0,
+  1.0,
+
+  // Back
+  1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0, -1.0, 1.0, -1.0, 1.0,
+  -1.0, 1.0,
+
+  // Bottom
+  -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0, -1.0,
+  -1.0, 1.0,
+];
+var boxIndices = [
+  // Top
+  0, 1, 2, 0, 2, 3,
+
+  // Left
+  4, 5, 6, 4, 6, 7,
+
+  // Right
+  8, 9, 10, 8, 10, 11,
+
+  // Front
+  12, 13, 14, 12, 14, 15,
+
+  // Back
+  16, 17, 18, 16, 18, 19,
+
+  // Bottom
+  20, 21, 22, 20, 22, 23,
+];
+var boxVertices = [
+  // X, Y, Z           R, G, B
+  // Top
+  -1.0, 1.0, -1.0, 0.5, 0.5, 0.5, -1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0,
+  0.5, 0.5, 0.5, 1.0, 1.0, -1.0, 0.5, 0.5, 0.5,
+
+  // Left
+  -1.0, 1.0, 1.0, 0.75, 0.25, 0.5, -1.0, -1.0, 1.0, 0.75, 0.25, 0.5, -1.0, -1.0,
+  -1.0, 0.75, 0.25, 0.5, -1.0, 1.0, -1.0, 0.75, 0.25, 0.5,
+
+  // Right
+  1.0, 1.0, 1.0, 0.25, 0.25, 0.75, 1.0, -1.0, 1.0, 0.25, 0.25, 0.75, 1.0, -1.0,
+  -1.0, 0.25, 0.25, 0.75, 1.0, 1.0, -1.0, 0.25, 0.25, 0.75,
+
+  // Front
+  1.0, 1.0, 1.0, 1.0, 0.0, 0.15, 1.0, -1.0, 1.0, 1.0, 0.0, 0.15, -1.0, -1.0,
+  1.0, 1.0, 0.0, 0.15, -1.0, 1.0, 1.0, 1.0, 0.0, 0.15,
+
+  // Back
+  1.0, 1.0, -1.0, 0.0, 1.0, 0.15, 1.0, -1.0, -1.0, 0.0, 1.0, 0.15, -1.0, -1.0,
+  -1.0, 0.0, 1.0, 0.15, -1.0, 1.0, -1.0, 0.0, 1.0, 0.15,
+
+  // Bottom
+  -1.0, -1.0, -1.0, 0.5, 0.5, 1.0, -1.0, -1.0, 1.0, 0.5, 0.5, 1.0, 1.0, -1.0,
+  1.0, 0.5, 0.5, 1.0, 1.0, -1.0, -1.0, 0.5, 0.5, 1.0,
+];
+//bool
+var upKeyPressed = false;
+var downKeyPressed = false;
+var leftKeyPressed = false;
+var rightKeyPressed = false;
+
+//------------------------------------------------
+//
 // functions
+//
+//------------------------------------------------
+
+/**
+ * sets up eventlistener for keydown and keyup events.
+ */
+function setUpButtonControls() {
+  const body = document.querySelector("body");
+
+  body.addEventListener("keydown", onKeyDown, false);
+  body.addEventListener("keyup", onKeyUp, false);
+}
+
+/**
+ * callback function for the keydown event
+ * @param {*} event
+ */
+function onKeyDown(event) {
+  switch (event.key) {
+    case "ArrowUp":
+      upKeyPressed = true;
+      break;
+    case "ArrowDown":
+      downKeyPressed = true;
+      break;
+    case "ArrowLeft":
+      leftKeyPressed = true;
+      break;
+    case "ArrowRight":
+      rightKeyPressed = true;
+      break;
+    default:
+      break;
+  }
+}
+
+/**
+ * callback function for the key up event
+ * @param {*} event
+ */
+function onKeyUp(event) {
+  switch (event.key) {
+    case "ArrowUp":
+      upKeyPressed = false;
+      break;
+    case "ArrowDown":
+      downKeyPressed = false;
+      break;
+    case "ArrowLeft":
+      leftKeyPressed = false;
+      break;
+    case "ArrowRight":
+      rightKeyPressed = false;
+      break;
+    default:
+      break;
+  }
+}
+
+/**
+ * returns the source code as string from the file of the given url
+ * @param {string} url
+ * @returns {string} shadercode
+ */
 async function getShaderSourceCode(url) {
   let response = await fetch(url);
   sourceCode = await response.text();
   return sourceCode;
 }
 
+/**
+ * creates and compiles a shader program with the given vertex and fragment shaders
+ * @param {WebGLRenderingContext} webGLContext
+ * @param {string} vertShaderCode
+ * @param {string} fragShaderCode
+ * @returns shaderProgram
+ */
 async function createAndCompileShaderProg(
   webGLContext,
   vertShaderCode,
@@ -74,12 +390,27 @@ async function createAndCompileShaderProg(
   return program;
 }
 
+/**
+ * Returns a WebGL Context from am HTML Canvas Element
+ * @param {HTMLCanvasElement} canvasID
+ * @returns {WebGLRenderingContext} weGLcontext
+ */
 function getWebGLContext(canvasID) {
   canvas = document.getElementById(canvasID);
   var webGLContext = canvas.getContext("webgl");
   return webGLContext;
 }
 
+/**
+ * Sets a few base settings for the webgl program.
+ * the given values for set enabled will be set as enabled
+ * for the rendering context.
+ * @param {WebGLRenderingContext} webGLContext
+ * @param {vec4} backgroundColor
+ * @param {Number} frontFaceOrientation
+ * @param {Number} cuttedFaces
+ * @param {*} setEnabled
+ */
 function setWebGLSettings(
   webGLContext,
   backgroundColor,
@@ -108,10 +439,18 @@ function setWebGLSettings(
   });
 }
 
-function createSkyBoxVBO(webGLContext) {
-  //TODO: hier weiter machen
-}
-
+/**
+ * Creates a CubeMap Texture with the linked images
+ * from a html document
+ * @param {WebGLRenderingContext} webGLContext
+ * @param {string} topimageid
+ * @param {string} bottomimageid
+ * @param {string} frontimageid
+ * @param {string} backimageid
+ * @param {string} leftimageid
+ * @param {string} rightimageid
+ * @returns boxTexture
+ */
 function createSkyBoxTexture(
   webGLContext,
   topimageid,
@@ -168,398 +507,186 @@ function createSkyBoxTexture(
     webGLContext.LINEAR_MIPMAP_LINEAR
   );
 
-  webGLContext.bindTexture(webGLContext.TEXTURE_CUBE_MAP, null); //unbind text mem
+  //webGLContext.bindTexture(webGLContext.TEXTURE_CUBE_MAP, null); //unbind text mem
   return boxTexture;
 }
 
-//#region WebGL Program
-var InitDemo = async function () {
-  //getting shader src
-  skyBoxFragShaderText = await getShaderSourceCode("skyBoxFragShader.glsl");
-  skyBoxVertShaderText = await getShaderSourceCode("skyBoxVertShader.glsl");
-
-  var gl = getWebGLContext("game-surface"); // get the context webgl context from canvas
-
-  //initialize webgl
-  setWebGLSettings(gl, [0.8, 0.8, 0.8, 1.0], gl.CCW, gl.FRONT, [
-    gl.DEPTH_TEST,
-    gl.CULL_FACE,
-  ]);
-
-  gl.disable(gl.CULL_FACE);
-  gl.cullFace(gl.BACK);
-
-  var skyBoxShaderProgram = await createAndCompileShaderProg(
-    gl,
-    skyBoxVertShaderText,
-    skyBoxFragShaderText
-  );
-  gl.useProgram(skyBoxShaderProgram);
-
-  //create a buffer
-  //create vertices write counterclockwise
-  var skyboxVerts = [
-    // X, Y, Z, w
-    // Top
-    -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
-    -1.0, 1.0,
-
-    // Left
-    -1.0, 1.0, 1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, -1.0, 1.0,
-    -1.0, 1.0,
-
-    // Right
-    1.0, 1.0, 1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0,
-    -1.0, 1.0,
-
-    // Front
-    1.0, 1.0, 1.0, 1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0,
-    1.0, 1.0,
-
-    // Back
-    1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0, -1.0, 1.0, -1.0, 1.0,
-    -1.0, 1.0,
-
-    // Bottom
-    -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0, -1.0,
-    -1.0, 1.0,
-  ];
-
-  var boxVertices = [
-    // X, Y, Z           R, G, B, A
-    // Top
-    -1.0, 1.0, -1.0, 0.5, 0.5, 0.5, 1.0, -1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0,
-    1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, -1.0, 0.5, 0.5, 0.5, 1.0,
-
-    // Left
-    -1.0, 1.0, 1.0, 0.75, 0.25, 0.5, 1.0, -1.0, -1.0, 1.0, 0.75, 0.25, 0.5, 1.0,
-    -1.0, -1.0, -1.0, 0.75, 0.25, 0.5, 1.0, -1.0, 1.0, -1.0, 0.75, 0.25, 0.5,
-    1.0,
-
-    // Right
-    1.0, 1.0, 1.0, 0.25, 0.25, 0.75, 1.0, 1.0, -1.0, 1.0, 0.25, 0.25, 0.75, 1.0,
-    1.0, -1.0, -1.0, 0.25, 0.25, 0.75, 1.0, 1.0, 1.0, -1.0, 0.25, 0.25, 0.75,
-    1.0,
-
-    // Front
-    1.0, 1.0, 1.0, 1.0, 0.0, 0.15, 1.0, 1.0, -1.0, 1.0, 1.0, 0.0, 0.15, 1.0,
-    -1.0, -1.0, 1.0, 1.0, 0.0, 0.15, 1.0, -1.0, 1.0, 1.0, 1.0, 0.0, 0.15, 1.0,
-
-    // Back
-    1.0, 1.0, -1.0, 0.0, 1.0, 0.15, 1.0, 1.0, -1.0, -1.0, 0.0, 1.0, 0.15, 1.0,
-    -1.0, -1.0, -1.0, 0.0, 1.0, 0.15, 1.0, -1.0, 1.0, -1.0, 0.0, 1.0, 0.15, 1.0,
-
-    // Bottom
-    -1.0, -1.0, -1.0, 0.5, 0.5, 1.0, 1.0, -1.0, -1.0, 1.0, 0.5, 0.5, 1.0, 1.0,
-    1.0, -1.0, 1.0, 0.5, 0.5, 1.0, 1.0, 1.0, -1.0, -1.0, 0.5, 0.5, 1.0, 1.0,
-  ];
-
-  var boxIndices = [
-    // Top
-    0, 1, 2, 0, 2, 3,
-
-    // Left
-    4, 5, 6, 4, 6, 7,
-
-    // Right
-    8, 9, 10, 8, 10, 11,
-
-    // Front
-    12, 13, 14, 12, 14, 15,
-
-    // Back
-    16, 17, 18, 16, 18, 19,
-
-    // Bottom
-    20, 21, 22, 20, 22, 23,
-  ];
-
-  //------------------------------------------------
-  //
-  // Buffer
-  //
-  //------------------------------------------------
-
+/**
+ * Create fill a Buffer for a SkyBox.
+ * Note that the Buffer is unbinded in this function and
+ * needs to be bound again before drawing.
+ * @param {WebGLRenderingContext} webGLContext
+ * @param {Shader Program} shaderProgram
+ * @param {Float32Array} vertices
+ * @returns {ArrayBuffer, AttribPointer} vbo, attribLoc
+ */
+function createVBO(webGLContext, vertices) {
   //vbo skybox
-  var skyboxVertexBufferObject = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, skyboxVertexBufferObject); //bind the buffer
-  gl.bufferData(
-    gl.ARRAY_BUFFER,
-    new Float32Array(skyboxVerts), //need to specify the type for the shader since js does not require us to
-    gl.STATIC_DRAW
+  var vbo = webGLContext.createBuffer();
+  webGLContext.bindBuffer(webGLContext.ARRAY_BUFFER, vbo); //bind the buffer
+  webGLContext.bufferData(
+    webGLContext.ARRAY_BUFFER,
+    new Float32Array(vertices), //need to specify the type for the shader since js does not require us to
+    webGLContext.STATIC_DRAW
   );
 
-  //index buffer object
-  var skyboxIndexBufferObject = gl.createBuffer();
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, skyboxIndexBufferObject);
-  gl.bufferData(
-    gl.ELEMENT_ARRAY_BUFFER,
-    new Uint16Array(boxIndices),
-    gl.STATIC_DRAW
+  webGLContext.bindBuffer(webGLContext.ARRAY_BUFFER, null); //unbind array buffer
+
+  return vbo;
+}
+
+/**
+ * creates and fills a element array buffer (ibo) for a cube
+ * @param {WebGLRenderingContext} webGLContext
+ * @param {Float32Array} cubeIndices
+ * @returns index buffer object
+ */
+function createIBO(webGLContext, cubeIndices) {
+  //box indices
+
+  var ibo = webGLContext.createBuffer();
+  webGLContext.bindBuffer(webGLContext.ELEMENT_ARRAY_BUFFER, ibo);
+  webGLContext.bufferData(
+    webGLContext.ELEMENT_ARRAY_BUFFER,
+    new Uint16Array(cubeIndices),
+    webGLContext.STATIC_DRAW
   );
 
-  // position attribute allocation
-
-  var positionAttribLocation = gl.getAttribLocation(
-    skyBoxShaderProgram,
-    "vertPosition"
+  webGLContext.bindBuffer(webGLContext.ELEMENT_ARRAY_BUFFER, null); //unbind ibo
+  return ibo;
+}
+/**
+ * binds the transcube buffer and enables the attriblocs
+ * @param {*} webGLContext
+ * @param {*} buffer
+ * @param {*} program
+ */
+function bindTransCubeBuffer(webGLContext, vbo, ibo, program) {
+  webGLContext.useProgram(program);
+  webGLContext.bindBuffer(webGLContext.ARRAY_BUFFER, vbo);
+  var vertPositionLoc = webGLContext.getAttribLocation(program, "vertPosition");
+  webGLContext.vertexAttribPointer(
+    vertPositionLoc, //Attribute Location
+    3, // number of elements per attribute
+    webGLContext.FLOAT, //type of elements
+    webGLContext.FALSE, //if data is normalized
+    6 * Float32Array.BYTES_PER_ELEMENT, //Size of an individual vertex
+    0 * Float32Array.BYTES_PER_ELEMENT //offset from the beginning of a single vertex to out attribute
   );
-  //var texCoordAttribLocation = gl.getAttribLocation(program, "vertTexCoord");
-  gl.vertexAttribPointer(
-    positionAttribLocation, //Attribute Location
+  webGLContext.enableVertexAttribArray(vertPositionLoc);
+
+  webGLContext.bindBuffer(webGLContext.ARRAY_BUFFER, vbo);
+  var vertColorLoc = webGLContext.getAttribLocation(program, "vertColor");
+
+  webGLContext.vertexAttribPointer(
+    vertColorLoc, //Attribute Location
+    3, // number of elements per attribute
+    webGLContext.FLOAT, //type of elements
+    webGLContext.FALSE, //if data is normalized
+    6 * Float32Array.BYTES_PER_ELEMENT, //Size of an individual vertex
+    3 * Float32Array.BYTES_PER_ELEMENT
+  );
+  webGLContext.enableVertexAttribArray(vertColorLoc);
+
+  webGLContext.bindBuffer(webGLContext.ELEMENT_ARRAY_BUFFER, ibo);
+}
+
+/**
+ * binds the skybox buffer and enables the attriblocs
+ * @param {*} webGLContext
+ * @param {*} buffer
+ * @param {*} program
+ */
+function bindSkyboxCubeBuffer(webGLContext, vbo, ibo, program) {
+  webGLContext.useProgram(program);
+  webGLContext.bindBuffer(webGLContext.ARRAY_BUFFER, vbo);
+  var vertPositionLoc = webGLContext.getAttribLocation(program, "vertPosition");
+  webGLContext.vertexAttribPointer(
+    vertPositionLoc, //Attribute Location
     4, // number of elements per attribute
-    gl.FLOAT, //type of elements
-    gl.FALSE, //if data is normalized
+    webGLContext.FLOAT, //type of elements
+    webGLContext.FALSE, //if data is normalized
     4 * Float32Array.BYTES_PER_ELEMENT, //Size of an individual vertex
     0 //offset from the beginning of a single vertex to out attribute
   );
-  gl.enableVertexAttribArray(positionAttribLocation);
+  webGLContext.enableVertexAttribArray(vertPositionLoc);
 
-  //color attribute allocation
-  //gl.vertexAttribPointer(
-  //texCoordAttribLocation, //Attribute Location
-  //2, // number of elements per attribute
-  //gl.FLOAT, //type of elements
-  //gl.FALSE, //if data is normalized
-  //5 * Float32Array.BYTES_PER_ELEMENT, //Size of an individual vertex
-  //3 * Float32Array.BYTES_PER_ELEMENT //offset from the beginning of a single vertex to out attribute
-  //);
-  //gl.enableVertexAttribArray(texCoordAttribLocation);
+  webGLContext.bindBuffer(webGLContext.ELEMENT_ARRAY_BUFFER, ibo);
+}
 
-  //unbinding Buffers
-  gl.bindBuffer(gl.ARRAY_BUFFER, null); //unbind array buffer
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null); //unbind ibo
-
-  //gl.vertexAttribPointer(
-  //colorAttribLocation, //Attribute Location
-  //3, // number of elements per attribute
-  //gl.FLOAT, //type of elements
-  //gl.FALSE, //if data is normalized
-  //7 * Float32Array.BYTES_PER_ELEMENT, //Size of an individual vertex
-  //3 * Float32Array.BYTES_PER_ELEMENT //offset from the beginning of a single vertex to out attribute
-  //);
-  //gl.enableVertexAttribArray(colorAttribLocation);
-
-  var boxTexture = createSkyBoxTexture(
-    gl,
-    "top_view",
-    "bottom_view",
-    "front_view",
-    "back_view",
-    "left_view",
-    "right_view"
-  );
-  //#region Matrices
-  // get the transfrom matrices location from vertex shader
-  var matWorldUniformLocation = gl.getUniformLocation(
-    skyBoxShaderProgram,
-    "mWorld"
-  );
-  var matViewUniformLocation = gl.getUniformLocation(
-    skyBoxShaderProgram,
-    "mView"
-  );
-  var matProjUniformLocation = gl.getUniformLocation(
-    skyBoxShaderProgram,
-    "mProj"
-  );
-
-  //create transform matrices
-  var worldMatrix = new Float32Array(16);
-  var viewMatrix = new Float32Array(16);
-  var projMatrix = new Float32Array(16);
-
-  glMatrix.mat4.identity(worldMatrix);
-  //TODO(Konrad): Look at und perspective func selber einbinden
-  glMatrix.mat4.lookAt(viewMatrix, [0, 0, -5], [0, 0, 0], [0, 1, 0]);
-  glMatrix.mat4.perspective(
-    projMatrix,
+function transformMatrices(mIdentity, mWorld, mView, mProjection) {
+  identity(mIdentity);
+  identity(mWorld);
+  lookAt(mView, [0, 0, -6], [0, 0, 0], [0, 1, 0]);
+  perspective(
+    mProjection,
     Math.PI / 4,
     canvas.clientWidth / canvas.clientHeight,
     0.1,
     1000.0
   );
+}
+
+function sendMatricesToShader(
+  webGLContext,
+  shaderProgram,
+  mWorld,
+  mView,
+  mProj
+) {
+  webGLContext.useProgram(shaderProgram);
+  var matWorldUniformLocation = webGLContext.getUniformLocation(
+    shaderProgram,
+    "mWorld"
+  );
+  var matViewUniformLocation = webGLContext.getUniformLocation(
+    shaderProgram,
+    "mView"
+  );
+  var matProjUniformLocation = webGLContext.getUniformLocation(
+    shaderProgram,
+    "mProj"
+  );
 
   //send matrices data to vertex shader
-  gl.uniformMatrix4fv(matWorldUniformLocation, gl.FALSE, worldMatrix);
-  gl.uniformMatrix4fv(matViewUniformLocation, gl.FALSE, viewMatrix);
-  gl.uniformMatrix4fv(matProjUniformLocation, gl.FALSE, projMatrix);
-  //#endregion
-
-  //
-  //
-  //main
-  //
-  //
-
-  //prepration for render loop
-  var angle = 0; // allocate mem for angle (needed in loop)
-
-  //create identity matrix
-  var identityMatrix = new Float32Array(16);
-  identity(identityMatrix);
-
-  //binding necessary buffers
-  gl.bindBuffer(gl.ARRAY_BUFFER, skyboxVertexBufferObject);
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, skyboxIndexBufferObject);
-  gl.bindTexture(gl.TEXTURE_CUBE_MAP, boxTexture);
-  //TODO: Konrad tries stuff!
-
-  //gl.disable(gl.CULL_FACE);
-  gl.enable(gl.BLEND);
-  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-
-  // Enable depth testing
-  gl.enable(gl.DEPTH_TEST);
-  gl.depthFunc(gl.LEQUAL);
-
-  //scale the skybox
-  let scaleVal = 30;
-  scale(worldMatrix, [scaleVal, scaleVal, scaleVal]);
-  gl.uniformMatrix4fv(matWorldUniformLocation, gl.FALSE, worldMatrix);
-
-  //main render loop
-  function loop() {
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-    angle = (performance.now() / 1000 / 6) * 2 * Math.PI;
-    //TODO: move camera around the cube.
-    rotate(viewMatrix, identityMatrix, angle / 4, [0, 1, 0]);
-    gl.uniformMatrix4fv(matViewUniformLocation, gl.FALSE, viewMatrix);
-
-    //TODO: inner box rendering
-    //skybox rendering
-
-    //rotation of the cube
-    //rotate(worldMatrix, identityMatrix, angle / 4, [0, 1, 0]);
-
-    //scaling of the cube
-
-    gl.uniformMatrix4fv(matWorldUniformLocation, gl.FALSE, worldMatrix);
-    gl.drawElements(gl.TRIANGLES, boxIndices.length, gl.UNSIGNED_SHORT, 0);
-
-    requestAnimationFrame(loop);
-  }
-  requestAnimationFrame(loop);
-};
-
-//#endregion
-
-//#region Matrix Functions
-
-/**
- * turns the given out into the identity matrix
- * @param {Float32Array} out
- */
-function identity(out) {
-  // x
-  out[0] = 1.0;
-  out[1] = 0.0;
-  out[2] = 0.0;
-  out[3] = 0.0;
-  // y
-  out[4] = 0.0;
-  out[5] = 1.0;
-  out[6] = 0.0;
-  out[7] = 0.0;
-  // z
-  out[8] = 0.0;
-  out[9] = 0.0;
-  out[10] = 1.0;
-  out[11] = 0.0;
-  // w
-  out[12] = 0.0;
-  out[13] = 0.0;
-  out[14] = 0.0;
-  out[15] = 1.0;
+  webGLContext.uniformMatrix4fv(
+    matWorldUniformLocation,
+    webGLContext.FALSE,
+    mWorld
+  );
+  webGLContext.uniformMatrix4fv(
+    matViewUniformLocation,
+    webGLContext.FALSE,
+    mView
+  );
+  webGLContext.uniformMatrix4fv(
+    matProjUniformLocation,
+    webGLContext.FALSE,
+    mProj
+  );
+}
+function sendWorldMatrixToShader(webGLContext, shaderProgram, mWorld) {
+  webGLContext.useProgram(shaderProgram);
+  var matWorldUniformLocation = webGLContext.getUniformLocation(
+    shaderProgram,
+    "mWorld"
+  );
+  webGLContext.uniformMatrix4fv(
+    matWorldUniformLocation,
+    webGLContext.FALSE,
+    mWorld
+  );
 }
 
-/**
- * Multiplies the ins Matrix with a translation matrix T(v)
- * and puts the result in out.
- * @param {Float32Array} out
- * @param {Float32Array} v
- */
-function translate(out, v) {
-  var x = v[0];
-  var y = v[1];
-  var z = v[2];
-  out[12] += out[0] * x + out[4] * y + out[8] * z;
-  out[13] += out[1] * x + out[5] * y + out[9] * z;
-  out[14] += out[2] * x + out[6] * y + out[10] * z;
-  out[15] += out[3] * x + out[7] * y + out[11] * z;
+function sendViewMatrixToShader(webGLContext, shaderProgram, mView) {
+  webGLContext.useProgram(shaderProgram);
+  var matWorldUniformLocation = webGLContext.getUniformLocation(
+    shaderProgram,
+    "mView"
+  );
+  webGLContext.uniformMatrix4fv(
+    matWorldUniformLocation,
+    webGLContext.FALSE,
+    mView
+  );
 }
-
-/**
- * scales the out matrix by the vec v
- * @param {Float32Array} out
- * @param {Float32Array} v
- */
-function scale(out, v) {
-  out[0] *= v[0];
-  out[1] *= v[0];
-  out[2] *= v[0];
-  out[3] *= v[0];
-  out[4] *= v[1];
-  out[5] *= v[1];
-  out[6] *= v[1];
-  out[7] *= v[1];
-  out[8] *= v[2];
-  out[9] *= v[2];
-  out[10] *= v[2];
-  out[11] *= v[2];
-}
-/**
- * multiplies the inserted matrix with a axis dependend rotation matrix.
- * the result is saved in out.
- * @param {Float32Array} out
- * @param {Float32Array} ins
- * @param {*} angle
- * @param {Float32Array} v
- * @returns
- */
-function rotate(out, ins, angle, v) {
-  const EPSILON = 0.000001;
-  var x = v[0];
-  var y = v[1];
-  var z = v[2];
-  var len = Math.hypot(x, y, z);
-  if (len < EPSILON) {
-    return 0;
-  } // break when no rotation axis selected
-  len = 1 / len;
-  x *= len;
-  y *= len;
-  z *= len;
-
-  // calculate cos, sin and tan
-  const sin = Math.sin(angle);
-  const cos = Math.cos(angle);
-  const tan = 1 - cos;
-
-  // create rotation matrix
-  const b01 = x * x * tan + cos;
-  const b02 = y * x * tan + z * sin;
-  const b03 = z * x * tan - y * sin;
-  const b11 = x * y * tan - z * sin;
-  const b12 = y * y * tan + cos;
-  const b13 = z * y * tan + x * sin;
-  const b21 = x * z * tan + y * sin;
-  const b22 = y * z * tan - x * sin;
-  const b23 = z * z * tan + cos;
-
-  //create final matrix
-  out[0] = ins[0] * b01 + ins[4] * b02 + ins[8] * b03;
-  out[1] = ins[1] * b01 + ins[5] * b02 + ins[9] * b03;
-  out[2] = ins[2] * b01 + ins[6] * b02 + ins[10] * b03;
-  out[3] = ins[3] * b01 + ins[7] * b02 + ins[11] * b03;
-  out[4] = ins[0] * b11 + ins[4] * b12 + ins[8] * b13;
-  out[5] = ins[1] * b11 + ins[5] * b12 + ins[9] * b13;
-  out[6] = ins[2] * b11 + ins[6] * b12 + ins[10] * b13;
-  out[7] = ins[3] * b11 + ins[7] * b12 + ins[11] * b13;
-  out[8] = ins[0] * b21 + ins[4] * b22 + ins[8] * b23;
-  out[9] = ins[1] * b21 + ins[5] * b22 + ins[9] * b23;
-  out[10] = ins[2] * b21 + ins[6] * b22 + ins[10] * b23;
-  out[11] = ins[3] * b21 + ins[7] * b22 + ins[11] * b23;
-}
-//#endregion
