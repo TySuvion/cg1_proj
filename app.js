@@ -104,27 +104,21 @@ var InitDemo = async function () {
   //prepration for render loop
   var angle = 0; // allocate mem for angle (needed in loop)
 
-  // bind the skybox cube buffer
-  bindSkyboxCubeBuffer(gl, skyboxVBO, cubeIBO, skyBoxShaderProgram);
-
   //bind the skybox texture
   gl.bindTexture(gl.TEXTURE_CUBE_MAP, boxTexture);
 
-  //TODO: Shit den Konrad gemacht hat ggf. noch weiter aufräumen.
-  //gl.disable(gl.CULL_FACE);
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
   // Enable depth testing
-  gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);
 
   //-------------------------------------------------------------------------
   // skybox transforms
   //-------------------------------------------------------------------------
   //scale the skybox
-  let scaleVal = 30;
-  scale(skyboxMatrix, [scaleVal, scaleVal, scaleVal]);
+  let skyboxScaleVal = 50;
+  scale(skyboxMatrix, [skyboxScaleVal, skyboxScaleVal, skyboxScaleVal]);
   sendMatricesToShader(
     gl,
     skyBoxShaderProgram,
@@ -147,10 +141,11 @@ var InitDemo = async function () {
   );
 
   //-------------------------------------------------------------------------
-  // teapot transforms                          TODO
+  // teapot transforms
   //-------------------------------------------------------------------------
   let teapotScaleVal = 0.3;
   translate(teapotMatrix, [0, 0, 0]);
+  rotate(teapotMatrix, identityMatrix, Math.PI / 2, [0, 1, 0]);
   scale(teapotMatrix, [teapotScaleVal, teapotScaleVal, teapotScaleVal]);
   sendMatricesToShader(
     gl,
@@ -173,6 +168,7 @@ var InitDemo = async function () {
     //-------------------------------------------------------------------------
     // skybox cube rendering
     //-------------------------------------------------------------------------
+    bindSkyboxCubeBuffer(gl, skyboxVBO, cubeIBO, skyBoxShaderProgram);
 
     //camera rotation
     rotate(viewMatrix, identityMatrix, angle / 20, [0, 1, 0]);
@@ -191,7 +187,28 @@ var InitDemo = async function () {
       teapotIBO,
       teapotShaderProgram
     );
+    // rotation controls
+    if (cubeRotationAxis == "X") {
+      rotate(
+        teapotMatrix,
+        identityMatrix,
+        rotationAngleX * 2 * Math.PI,
+        [1, 0, 0]
+      );
+      scale(teapotMatrix, [teapotScaleVal, teapotScaleVal, teapotScaleVal]);
+    }
+    if (cubeRotationAxis == "Y") {
+      rotate(
+        teapotMatrix,
+        identityMatrix,
+        rotationAngleY * 2 * Math.PI,
+        [0, 1, 0]
+      );
+      scale(teapotMatrix, [teapotScaleVal, teapotScaleVal, teapotScaleVal]);
+    }
+
     gl.drawElements(gl.TRIANGLES, utahIndices.length, gl.UNSIGNED_SHORT, 0);
+    sendWorldMatrixToShader(gl, teapotShaderProgram, teapotMatrix);
     sendViewMatrixToShader(gl, teapotShaderProgram, viewMatrix);
     //-------------------------------------------------------------------------
     // transparent cube rendering
