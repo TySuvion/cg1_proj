@@ -143,7 +143,7 @@ var InitDemo = async function () {
   //-------------------------------------------------------------------------
   // teapot transforms
   //-------------------------------------------------------------------------
-  let teapotScaleVal = 0.3;
+  let teapotScaleVal = 0.25;
   translate(teapotMatrix, [0, 0, 0]);
   rotate(teapotMatrix, identityMatrix, Math.PI / 2, [0, 1, 0]);
   scale(teapotMatrix, [teapotScaleVal, teapotScaleVal, teapotScaleVal]);
@@ -206,10 +206,10 @@ var InitDemo = async function () {
       );
       scale(teapotMatrix, [teapotScaleVal, teapotScaleVal, teapotScaleVal]);
     }
-
-    gl.drawElements(gl.TRIANGLES, utahIndices.length, gl.UNSIGNED_SHORT, 0);
     sendWorldMatrixToShader(gl, teapotShaderProgram, teapotMatrix);
     sendViewMatrixToShader(gl, teapotShaderProgram, viewMatrix);
+    gl.drawElements(gl.TRIANGLES, utahIndices.length, gl.UNSIGNED_SHORT, 0);
+
     //-------------------------------------------------------------------------
     // transparent cube rendering
     //-------------------------------------------------------------------------
