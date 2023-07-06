@@ -4,6 +4,7 @@
 //
 //------------------------------------------------
 var InitDemo = async function () {
+  setUpButtonControls();
   //getting shader src
   skyBoxFragShaderText = await getShaderSourceCode(
     "shaders/skyBoxFragShader.glsl"
@@ -103,7 +104,6 @@ var InitDemo = async function () {
 
   //transcube transforms
   translate(worldMatrix2, [0, 0, 0]);
-  rotate(worldMatrix2, identityMatrix, Math.PI / 16, [0, 1, 0]);
   scale(worldMatrix2, [1, 1, 1]);
 
   //main render loop
@@ -111,8 +111,13 @@ var InitDemo = async function () {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     angle = (performance.now() / 1000 / 6) * 2 * Math.PI;
+    angle /= 5;
     //TODO: move camera around the cube.
+
+    //camera rotation controlls
     rotate(viewMatrix, identityMatrix, angle / 20, [0, 1, 0]);
+    sendViewMatrixToShader(gl, skyBoxShaderProgram, viewMatrix);
+    //rotate(viewMatrix, identityMatrix, angle / 20, [0, 1, 0]);
     sendViewMatrixToShader(gl, skyBoxShaderProgram, viewMatrix);
 
     gl.drawElements(gl.TRIANGLES, boxIndices.length, gl.UNSIGNED_SHORT, 0);
@@ -125,6 +130,19 @@ var InitDemo = async function () {
       viewMatrix,
       projMatrix
     );
+    if (rightKeyPressed) {
+      rotate(worldMatrix2, identityMatrix, angle, [0, 1, 0]);
+    }
+    if (leftKeyPressed) {
+      rotate(worldMatrix2, identityMatrix, angle, [0, -1, 0]);
+    }
+    if (upKeyPressed) {
+      rotate(worldMatrix2, identityMatrix, angle, [1, 0, 0]);
+    }
+    if (downKeyPressed) {
+      rotate(worldMatrix2, identityMatrix, angle, [-1, 0, 0]);
+    }
+    sendWorldMatrixToShader(gl, transparentShaderProgram, worldMatrix2);
     gl.drawElements(gl.TRIANGLES, boxIndices.length, gl.UNSIGNED_SHORT, 0);
 
     requestAnimationFrame(loop);
@@ -216,12 +234,75 @@ var boxVertices = [
   -1.0, -1.0, -1.0, 0.5, 0.5, 1.0, -1.0, -1.0, 1.0, 0.5, 0.5, 1.0, 1.0, -1.0,
   1.0, 0.5, 0.5, 1.0, 1.0, -1.0, -1.0, 0.5, 0.5, 1.0,
 ];
+//bool
+var upKeyPressed = false;
+var downKeyPressed = false;
+var leftKeyPressed = false;
+var rightKeyPressed = false;
 
 //------------------------------------------------
 //
 // functions
 //
 //------------------------------------------------
+
+/**
+ * sets up eventlistener for keydown and keyup events.
+ */
+function setUpButtonControls() {
+  const body = document.querySelector("body");
+
+  body.addEventListener("keydown", onKeyDown, false);
+  body.addEventListener("keyup", onKeyUp, false);
+}
+
+/**
+ * callback function for the keydown event
+ * @param {*} event
+ */
+function onKeyDown(event) {
+  console.log(event);
+  switch (event.key) {
+    case "ArrowUp":
+      upKeyPressed = true;
+      break;
+    case "ArrowDown":
+      downKeyPressed = true;
+      break;
+    case "ArrowLeft":
+      leftKeyPressed = true;
+      break;
+    case "ArrowRight":
+      rightKeyPressed = true;
+      break;
+    default:
+      break;
+  }
+}
+
+/**
+ * callback function for the key up event
+ * @param {*} event
+ */
+function onKeyUp(event) {
+  console.log(event);
+  switch (event.key) {
+    case "ArrowUp":
+      upKeyPressed = false;
+      break;
+    case "ArrowDown":
+      downKeyPressed = false;
+      break;
+    case "ArrowLeft":
+      leftKeyPressed = false;
+      break;
+    case "ArrowRight":
+      rightKeyPressed = false;
+      break;
+    default:
+      break;
+  }
+}
 
 /**
  * returns the source code as string from the file of the given url
@@ -528,7 +609,7 @@ function bindSkyboxCubeBuffer(webGLContext, vbo, ibo, program) {
 function transformMatrices(mIdentity, mWorld, mView, mProjection) {
   identity(mIdentity);
   identity(mWorld);
-  lookAt(mView, [0, 0, -5], [0, 0, 0], [0, 1, 0]);
+  lookAt(mView, [0, 0, -6], [0, 0, 0], [0, 1, 0]);
   perspective(
     mProjection,
     Math.PI / 4,
